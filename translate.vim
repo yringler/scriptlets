@@ -1,3 +1,12 @@
+function! FlipWideString(string)
+	let length = strlen(a:string)	" in charachters
+	let flipped = ''
+	for i in range(length, 0 , -1)
+		let byte_index = byteidx(a:string, i)
+		let flipped = flipped . strpart(a:string, byte_index, 1)
+	endfor
+endfunction
+
 " opens dialog to assist translation of line where cursor is at
 function! Translate_line()
 	normal ^	" the rest position of cursor is start of first word
@@ -6,8 +15,8 @@ function! Translate_line()
 	" number of words in this line translated so far
 	let num_done = 0
 	" more scary flags
-	let end_phrase = 0
-	let end_par = 0
+	let start_phrase = 0
+	let start_par = 0
 
 	" as long as all the words haven't been translated
 	while num_done < len(source)
@@ -37,9 +46,9 @@ function! Translate_line()
 				" // for paragraph break, represented by \n\n
 				" must be immidiately following a digit
 				if word == '/'
-					let end_phrase = 1
+					let start_phrase = 1
 				elseif word == '//'
-					let end_par = 1
+					let start_par = 1
 				endif
 			" if add word to translation string
 			else
@@ -63,6 +72,12 @@ function! Translate_line()
 			" by a digit), or if this is last word
 
 			if index+1 == len(trans) || trans[index+1] !~ '\D' 
+				if start_phrase
+					exe "normal i\<LF>\<Esc>^d0"
+				elseif start_par
+					exe "normal i\<LF>\<LF>\<Esc>^d0"
+				endif
+
 				" move cursor into position
 				exe "normal" . num_trans_now . "E"
 				" this puts in the translation
@@ -71,15 +86,10 @@ function! Translate_line()
 				" be translated. Probably already there
 				exe "normal ^d0"
 
-				if end_phrase
-					exe "normal i\<LF>\<Esc>"
-				elseif end_par
-					exe "normal i\<LF>\<LF>\<Esc>"
-				endif
 
 				let at_new_trans = 1
-				let end_phrase = 0
-				let end_par = 0
+				let start_phrase = 0
+				let start_par = 0
 			endif
 		endfor
 	endwhile
