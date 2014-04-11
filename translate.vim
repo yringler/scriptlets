@@ -9,7 +9,7 @@ function! Translate_line()
 	" as long as all the words haven't been translated
 	while num_done < len(source)
 		" bite sized portion of source text to work on
-		let prompt = join(source[num_done : num_done+10]) . ": "
+		let prompt = join(source[num_done : num_done+5]) . ": "
 		let trans = split(input(prompt))
 		" this is a scary flag. I don't like flags.
 		" it is set to true if and only if the first word of
@@ -20,13 +20,13 @@ function! Translate_line()
 		for index in range(len(trans))
 			let word = trans[index]
 
-			if word =~ '\d'
+			if word !~ '\D'
 				" digit in input means following phrase
 				" translates <digit> words of source
 				let num_trans_now = word
 				let num_done += num_trans_now
 				continue
-			elseif trans[index-1] =~ '\d' && word =~ '/'
+			elseif trans[index-1] !~ '\D' && word =~ '/'
 				" / for phrase break , represented by \n and
 				" // for paragraph break, represented by \n\n
 				" must be immidiately following a digit
@@ -36,6 +36,12 @@ function! Translate_line()
 					exe "normal Ea\<LF>\<LF>\<LF>\<Esc>^d0"
 				endif
 				continue
+			endif
+
+			" to enter a digit in translation, put any non-digit
+			" printed charachter adjacent to it
+			if word =~ '\d'
+				let word = matchstr(word, '\d')
 			endif
 
 			if at_new_trans
@@ -49,7 +55,7 @@ function! Translate_line()
 			" this is done if next is new part (which is preceded
 			" by a digit), or if this is last word
 
-			if index+1 == len(trans) || trans[index+1] =~ '\d' 
+			if index+1 == len(trans) || trans[index+1] !~ '\D' 
 				" move cursor into position
 				exe "normal" . num_trans_now . "E"
 				" this puts in the translation
