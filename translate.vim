@@ -39,9 +39,9 @@ function! Translate_line()
 			endif
 
 			" to enter a digit in translation, put any non-digit
-			" printed charachter adjacent to it
+			" printed charachter before it
 			if word =~ '\d'
-				let word = matchstr(word, '\d')
+				let word = matchstr(word, '\d.*')
 			endif
 
 			if at_new_trans
