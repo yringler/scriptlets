@@ -7,20 +7,41 @@ function get_dat	# args: string to extract from, string proceding nums to get
 }
 
 track=1
+oldchap=
+last_part_chap=
+oldi=
+part=
 for i in $(ls *mp3 | sort -n); do
-	tape=$(get_dat "$i" Tape)
-	side=$(get_dat "$i" Side)
 	ch=$(echo $i | cut -d \- -f 1 )
-	part=$(get_dat "$i" Part)
+
+	if [ $ch == "$oldchap" ]; then
+		if [ "$last_part_chap" != $ch ]; then
+			part=2
+			mp3info -t ${ch}-1 -a "Rabbi Markel" \
+				-n $(( track - 1 )) \
+				-l "Advanced Shaar Hayichud" "$oldi"
+			#echo --song ${ch}-1 --artist "Rabbi Markel" --track
+			#$(( track - 1 )) --album "Advanced Shaar Hayichud"
+			#"$oldi"
+			last_part_chap=$ch
+		fi
+	else
+		part=
+	fi
 
 	if [ "$part" ]; then
 		name="$ch-$part"
-	elif [ "$tape" ]; then
-		name="$ch($tape,$side)"
+		let part++
+	elif [ "$ch" ]; then
+		name="$ch"
 	else
 		name=000\ intro
 	fi
 
-	id3v2 --song "$name" --artist "Rabbi Markel" --track $track --album "Advanced Shaar Hayichud" "$i"
+	mp3info -t "$name" -a "Rabbi Markel" -n $track -l "Advanced Shaar Hayichud" "$i"
+	#echo --song "$name" --artist "Rabbi Markel" --track $track --album "Advanced Shaar Hayichud"
+
+	oldi="$i"
+	oldchap=$ch
 	let track++
 done
