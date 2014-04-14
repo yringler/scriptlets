@@ -1,10 +1,35 @@
-function! FlipWideString(string)
-	let length = strlen(a:string)	" in charachters
-	let flipped = ''
-	for i in range(length, 0 , -1)
-		let byte_index = byteidx(a:string, i)
-		let flipped = flipped . strpart(a:string, byte_index, 1)
+function! FlipWideString(str)
+	let char_list = split(a:str, '\zs')
+	call reverse(char_list)
+
+	for i in range(len(char_list))
+		" ugly ugly kludge because of brain dead vimscript rules. Why
+		" can't I append to an empty string???? stupid stupid stupid
+		if i != 0
+			let tmp = tmp . char_list[i]
+		else
+			let tmp = char_list[i]
+		endif
 	endfor
+	
+	return tmp
+endfunction
+
+" three lines in prompt
+function! GenPrompt(source, upto)
+	let hist_start = a:upto < 10? 0: a:upto - 10
+	let line1 = FlipWideString(join(a:source[hist_start : a:upto-1]))
+	let line2 = FlipWideString(join(a:source[a:upto : a:upto+7]))
+	let line3 = FlipWideString(join(a:source[a:upto+8 : a:upto+18])) 
+	let line4 = "\n" . line2 . ": "
+	
+	if a:upto != 0
+		let prompt = join([line1,line2,line3,line4], "\n")
+	else
+		let prompt = join([line2,line3,line4], "\n")
+	endif
+
+	return prompt
 endfunction
 
 " opens dialog to assist translation of line where cursor is at
@@ -21,7 +46,7 @@ function! Translate_line()
 	" as long as all the words haven't been translated
 	while num_done < len(source)
 		" bite sized portion of source text to work on
-		let prompt = join(source[num_done : num_done+5]) . ": "
+		let prompt = FlipWideString(join(source[num_done : num_done+5])) . ": "
 		let trans = split(input(prompt))
 		" this is a scary flag. I don't like flags.
 		" it is set to true if and only if the first word of
