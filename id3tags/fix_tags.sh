@@ -17,12 +17,12 @@ for i in $(ls *mp3 | sort -n); do
 	if [ $ch == "$oldchap" ]; then
 		if [ "$last_part_chap" != $ch ]; then
 			part=2
-			mp3info -t ${ch}-1 -a "Rabbi Markel" \
-				-n $(( track - 1 )) \
-				-l "Advanced Shaar Hayichud" "$oldi"
-			#echo --song ${ch}-1 --artist "Rabbi Markel" --track
-			#$(( track - 1 )) --album "Advanced Shaar Hayichud"
-			#"$oldi"
+			#mp3info -t ${ch}-1 -a "Rabbi Markel" \
+			#	-n $(( track - 1 )) \
+			#	-l "Advanced Shaar Hayichud" "$oldi"
+			id3v2 --song ${ch}-1 --artist "Rabbi Yossi Markel" --track \
+			$(( track - 1 )) --album "Advanced Shaar Hayichud" \
+			"$oldi"
 			last_part_chap=$ch
 		fi
 	else
@@ -38,8 +38,8 @@ for i in $(ls *mp3 | sort -n); do
 		name=000\ intro
 	fi
 
-	mp3info -t "$name" -a "Rabbi Markel" -n $track -l "Advanced Shaar Hayichud" "$i"
-	#echo --song "$name" --artist "Rabbi Markel" --track $track --album "Advanced Shaar Hayichud"
+	#mp3info -t "$name" -a "Rabbi Markel" -n $track -l "Advanced Shaar Hayichud" "$i"
+	id3v2 --song "$name" --artist "Rabbi Yossi Markel" --track $track --album "Advanced Shaar Hayichud" $i
 
 	oldi="$i"
 	oldchap=$ch
