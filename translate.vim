@@ -19,8 +19,8 @@ endfunction
 function! GenPrompt(source, upto)
 	let hist_start = a:upto < 10? 0: a:upto - 10
 	let line1 = FlipWideString(join(a:source[hist_start : a:upto-1]))
-	let line2 = FlipWideString(join(a:source[a:upto : a:upto+7]))
-	let line3 = FlipWideString(join(a:source[a:upto+8 : a:upto+18])) 
+	let line2 = FlipWideString(join(a:source[a:upto : a:upto+10]))
+	let line3 = FlipWideString(join(a:source[a:upto+8 : a:upto+20])) 
 	let line4 = "\n" . line2 . ": "
 	
 	if a:upto != 0
@@ -45,8 +45,7 @@ function! Translate_line()
 
 	" as long as all the words haven't been translated
 	while num_done < len(source)
-		" bite sized portion of source text to work on
-		let prompt = FlipWideString(join(source[num_done : num_done+5])) . ": "
+		let prompt = GenPrompt(source,num_done)
 		let trans = split(input(prompt))
 		" this is a scary flag. I don't like flags.
 		" it is set to true if and only if the first word of
