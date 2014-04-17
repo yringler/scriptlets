@@ -133,6 +133,8 @@ function TranslateLine()
 	let end_phrase = 0
 	let end_par = 0
 
+	" keep requesting further input untill the whole line is translated
+	" todo: add stop-here command
 	while lineTranslator.upto < len(lineTranslator.src)
 		let input = split(input(lineTranslator.genPrompt()))
 		" process a command
@@ -155,6 +157,7 @@ function TranslateLine()
 			continue
 		endif
 
+		" process one line of translation input
 		for i in range(len(input))
 			if input[i] !~ '\D'
 				if num_trans != 0
@@ -162,12 +165,19 @@ function TranslateLine()
 				endif
 				let num_trans = input[i]
 			endif
+			" if / or // before digit or end of current
+			" translation input, set current translation unit as
+			" end of phrase. But method edits last added so set
+			" flag to set when trans is added.
 			if i+1 == len(input)  || input[i+1] !~ '\D'
 				if input[i] == '/'
 					let end_phrase = 1
 				elseif input[i] == '//'
 					let end_par = 1
 				endif
+			" if right after digit set as beggining of phrase
+			" this is done by saying that the last translation
+			" unit was the end
 			elseif i != 0 && input[i-1] !~ '\D'
 				if input[i] == '/'
 					lineTranslator.end("phrase")
