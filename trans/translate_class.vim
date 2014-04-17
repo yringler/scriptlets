@@ -121,7 +121,7 @@ endfunction
 
 " this function is embaressingly long, but very straight-forward, and
 " hopefully it will shrink soon enough
-function TranslateLine()
+function! TranslateLine()
 	let lineTranslator = deepcopy(LineTranslator)
 	let lineTranslator.src = split(getline("."))
 
@@ -129,7 +129,7 @@ function TranslateLine()
 	" if get new number and num_trans is not 0, this means that the phrase
 	" wasn't tranlated, and an empty trans is added with that number
 	let num_trans = 0
-	let trans = []
+	let trans = ""
 	let end_phrase = 0
 	let end_par = 0
 
@@ -189,7 +189,7 @@ function TranslateLine()
 				       let word = substitute(word, '\\', '', '')
 			endif
 			
-			let trans += word
+			let trans .= word
 		endfor
 		
 		if num_trans < 1
@@ -197,8 +197,8 @@ function TranslateLine()
 			finish
 		endif
 
-		lineTranslator.trans(num_trans,join(trans))
-		trans = []
+		lineTranslator.trans(num_trans,trans)
+		trans = ""
 		
 		if end_phrase
 			lineTranslator.end("phrase")
