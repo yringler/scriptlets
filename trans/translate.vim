@@ -79,7 +79,7 @@ function! Translate_line()
 				" to enter a digit or / in translation, put a
 				" back slash before it. all other charachters
 				" of the string are untouched
-				if word =~ '\d' || word =~ '\\'
+				if word =~ '\\\d' || word =~ '\/'
 				       let word = substitute(word, '\\', '', '')
 				endif
 
