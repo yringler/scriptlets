@@ -198,6 +198,7 @@ function TranslateLine()
 		endif
 
 		lineTranslator.trans(num_trans,join(trans))
+		trans = []
 		
 		if end_phrase
 			lineTranslator.end("phrase")
