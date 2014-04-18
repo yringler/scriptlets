@@ -182,15 +182,13 @@ function! TranslateLine()
 				let div = word == '/' ? "phrase" : "par"
 
 				if input[i-1] !~ '\D'
-					let div = "start" . div
+					call lineTrans.setDiv("start" . div)
 				elseif i+1 == len(input) || input[i+1] !~ '\D'
-					let div = "end" . div
+					call lineTrans.setDiv("end" . div)
 				else
 					echo ERROR
 					finish
 				endif
-
-				call lineTrans.setDiv(div)
 			else
 				call add(trans, word)
 			endif
@@ -206,5 +204,8 @@ function! TranslateLine()
 		endfor
 	endwhile
 
-	call setline(line("."), lineTrans.join())
+	" clear line on but don't clear following lines
+	let output = lineTrans.join()
+	call setline(line("."), output[0])
+	call append(line("."), output[1:])
 endfunction
