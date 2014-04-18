@@ -24,7 +24,7 @@ endfunction
 
 " erases the most recent translation added
 function! LineTranslator.eraseLast() dict
-	num_words_back = len(split(self.trans[-1].source))
+	let num_words_back = len(split(self.trans[-1].source))
 	call remove(self.trans, -1)
 	let self.upto -= num_words_back
 endfunction
