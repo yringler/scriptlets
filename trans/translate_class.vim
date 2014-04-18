@@ -59,7 +59,9 @@ function! LineTranslator.join() dict
 		let added_comment = 0
 		if i.comment != ""
 			call extend(list, ["comment" , i.comment])
-			added_comment = 1
+			" this is the teensiest bit kludgey
+			" set to 2 to back over two lines, as per extend call
+			added_comment = 2
 		endif
 
 		if i.div =~ "start"
