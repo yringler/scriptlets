@@ -123,15 +123,15 @@ endfunction
 
 function! LineTranslator.command(cmd) dict
 	if a:cmd == 'a'		" append
-		self.sourceAppend()
+		call self.sourceAppend()
 	elseif a:cmd == 'b'	" backspace
-		self.eraseLast()
+		call self.eraseLast()
 	elseif a:cmd == 'c'	" clear
-		self.noEnd()
+		call self.noEnd()
 	elseif a:cmd == 'f'	" frase
-		self.end("phrase")
+		call self.end("phrase")
 	elseif a:cmd == 'p'	" paragraph
-		self.end("par")
+		call self.end("par")
 	else 
 		echo ERROR
 		finish
