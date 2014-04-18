@@ -58,7 +58,7 @@ function! LineTranslator.join() dict
 		
 		let added_comment = 0
 		if i.comment != ""
-			call extend(list, [ "comment" i.comment])
+			call extend(list, ["comment" , i.comment])
 			added_comment = 1
 		endif
 
