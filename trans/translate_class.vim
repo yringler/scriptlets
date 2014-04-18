@@ -136,7 +136,6 @@ function! LineTranslator.command(cmd) dict
 		echo ERROR
 		finish
 	endif
-	continue
 endfunction
 
 
