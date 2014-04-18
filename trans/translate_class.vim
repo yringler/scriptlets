@@ -3,30 +3,40 @@ let LineTranslator.upto = 0
 
 " Individual translation units
 " stored in list LineTranslator.trans
-let Trans = { "source": "", "trans": "", "comment": "" }
-let Trans.end_phrase = 0
-let Trans.end_par = 0
+" div must match \(start\|end\)\(phrase\|par\)
+let Trans = { "source": "", "trans": "", "div": "", "comment": "" }
 
-" upto is number of words that have been translated
-" numTrans is number of *translations* which could be a smaller number
-" because a translation unit (or a Trans) could translate more than one word
-" at at time
-function! LineTranslator.numTrans() dict
-	return len(self.trans)
+function! LineTranslator.add() dict
+	call add(self.trans, deepcopy(g:Trans))
 endfunction
 
-"adds current source word to latest translated source
-function! LineTranslator.sourceAppend() dict
-	let self.trans[-1].source .= ' ' . self.source[self.upto]
-	let self.upto += 1
-	" don't clear flags
+function! LineTranslator.setTrans(trans) dict
+	let self.trans[-1].trans = a:trans
 endfunction
 
-" erases the most recent translation added
-function! LineTranslator.eraseLast() dict
-	let num_words_back = len(split(self.trans[-1].source))
-	call remove(self.trans, -1)
-	let self.upto -= num_words_back
+function! LineTranslator.setSource(num) dict
+	let source = join(self.source[self.upto : self.upto + a:num-1])
+	let self.trans[-1].source = source
+	let self.upto += a:num
+endfunction
+
+" arg [start/end][phrase/par]
+" skips add if logical, based on last
+function! LineTranslator.setDiv(div) dict
+	if a:div !~ '\(start\|end\)\(par\|phrase\)'
+		echo ERROR
+		finish
+	endif
+
+	if len(self.trans)  > 1
+		if a:div == 'startphrase' && self.trans[-2].div =~ "end"
+			return
+		elseif a:div == 'startpar' && self.trans[-2].div == "endpar"
+			return
+		endif
+	endif
+
+	let self.trans[-1].div = a:div
 endfunction
 
 " return string with the whole business - source&trans - properly formatted
@@ -42,52 +52,20 @@ function! LineTranslator.join() dict
 		" be source
 		call add(list, i.trans)
 
-		if i.end_phrase
-			call add(list, "")
-		elseif i.end_par 
-			call extend(list, ["",""])
+		if i.div =~ "start"
+			let idx = -2	" back up over trans and source
+		elseif i.div =~ "end"
+			let idx = len(list)
+		endif
+
+		if i.div =~ "phrase"
+			call extend(list, [""], idx)
+		elseif i.div =~ "par"
+			call extend(list, ["",""], idx)
 		endif
 	endfor
 
 	return list + ["endmine"]
-endfunction
-
-" add translation. num is number of words being translated. 
-function! LineTranslator.addTrans(num, arg) dict
-	" this is awsome! *four* trans variables in diffrent scope!
-	let tmp_trans = deepcopy(g:Trans)
-	let tmp_trans.trans = a:arg
-	" subtract 1 - eg upto=0,num=2: [0 : 0+2-1] gets two: upto and after
-	let tmp_trans.source = join(self.source[self.upto : self.upto +a:num-1])
-
-	call add(self.trans, deepcopy(tmp_trans))
-	let self.upto += a:num
-endfunction
-
-" arg: "phrase" or "par" short for paragraph. Any string containing par will
-" match
-function! LineTranslator.end(ends) dict
-	if a:ends == "phrase"
-		let self.trans[-1].end_phrase = 1
-		" to allow changing mind
-		let self.trans[-1].end_par = 0
-	elseif a:ends =~ "par"
-		let self.trans[-1].end_par = 1
-		let self.trans[-1].end_phrase = 0
-	endif
-endfunction
-
-"" set <back> from end not to be end of anything. 1 is 1st at end, 2 2nd etc
-" I decided to simplify. If I feel this functionality is needed I'll put it
-" back
-function! LineTranslator.noEnd() dict
-	"if a:back < 1
-	"	echo ERROR!!!
-	"	finish
-	"endif
-
-	let self.trans[-1].end_phrase = 0
-	let self.trans[-1].end_par = 0
 endfunction
 
 " support function for genPrompt. echo <hebrew> is left-to-right...which is
@@ -121,37 +99,63 @@ function! LineTranslator.genPrompt() dict
 	return prompt
 endfunction
 
+" upto is number of words that have been translated
+" numTrans is number of *translations* which could be a smaller number
+" because a translation unit (or a Trans) could translate more than one word
+" at at time
+function! LineTranslator.numTrans() dict
+	return len(self.trans)
+endfunction
+
+"adds current source word to latest translated source
+function! LineTranslator.sourceAppend() dict
+	let self.trans[-1].source .= ' ' . self.source[self.upto]
+	let self.upto += 1
+endfunction
+
+" erases the most recent translation added
+function! LineTranslator.eraseLast() dict
+	let num_words_back = len(split(self.trans[-1].source))
+	call remove(self.trans, -1)
+	let self.upto -= num_words_back
+endfunction
+
+"" set <back> from end not to be end of anything. 1 is 1st at end, 2 2nd etc
+" I decided to simplify. If I feel this functionality is needed I'll put it
+" back
+function! LineTranslator.noDiv() dict
+	"if a:back < 1
+	"	echo ERROR!!!
+	"	finish
+	"endif
+
+	let self.trans[-1].div = ""
+endfunction
+
+
 function! LineTranslator.command(cmd) dict
 	if a:cmd == 'a'		" append
 		call self.sourceAppend()
 	elseif a:cmd == 'b'	" backspace
 		call self.eraseLast()
 	elseif a:cmd == 'c'	" clear
-		call self.noEnd()
+		call self.noDiv()
 	elseif a:cmd == 'f'	" frase
-		call self.end("phrase")
+		call self.setDiv("endphrase")
 	elseif a:cmd == 'p'	" paragraph
-		call self.end("par")
+		call self.setDiv("endpar")
 	else 
 		echo ERROR
 		finish
 	endif
 endfunction
 
-
-" this function is embaressingly long, but very straight-forward, and
-" hopefully it will shrink soon enough
-" update: this function is a complete mess and needs to shring NOW
 function! TranslateLine()
 	let lineTrans = deepcopy(g:LineTranslator)
 	let lineTrans.source = split(getline("."))
 
-	let num_trans = 0
-	let last_was_empty = 0
 	" list preferable to avoid space combining stuff
 	let trans = []
-	let end_phrase = 0
-	let end_par = 0
 
 	" keep requesting further input untill the whole line is translated
 	" todo: add stop-here command
@@ -167,57 +171,38 @@ function! TranslateLine()
 		" process one line of translation input
 		for i in range(len(input))
 			let word = input[i]
+
 			if word !~ '\D'
-				" if input has two consequtive numbers
-				if last_was_empty
-					call lineTrans.addTrans(num_trans,"")
-				endif
-				let num_trans = word
-				" I hate flags
-				let last_was_empty = 1
+				call lineTrans.add()
+				call lineTrans.setSource(word)
 				continue
 			endif
-			" if / or // before digit or end of current
-			" translation input, set current translation unit as
-			" end of phrase. But method edits last added so set
-			" flag to set when trans is added.
-			if word == '/'
-				if i+1 == len(input)  || input[i+1] !~ '\D'
-					let end_phrase = 1
-				elseif input[i-1] !~ '\D'
-					call lineTrans.end("phrase")
-				endif
-			" if right after digit set as beggining of phrase
-			" this is done by saying that the last translation
-			" unit was the end
-			elseif word == '//'
-				if i+1 == len(input)  || input[i+1] !~ '\D'
-					let end_par = 1
-				elseif input[i-1] !~ '\D'
-					call lineTrans.end("par")
-				endif
-			elseif word =~ '\\\d' || word =~ '\/'
-				       let word = substitute(word, '\\', '', '')
-			endif
 
-			" wow this code is a complete mess
-			" needs clean up
-			if word != '/' && word != '//'
+			if word == '/' || word == '//'
+				let div = word == '/' ? "phrase" : "par"
+
+				if input[i-1] !~ '\D'
+					let div = "start" . div
+				elseif i+1 == len(input) || input[i+1] !~ '\D'
+					let div = "end" . div
+				else
+					echo ERROR
+					finish
+				endif
+
+				call lineTrans.setDiv(div)
+			else
 				call add(trans, word)
 			endif
-			let last_was_empty = 0
+
+			if word =~ '\\\d' || word =~ '\/'
+			       let word = substitute(word, '\\', '', '')
+			endif
+
 		
 			if i+1 == len(input)  || input[i+1] !~ '\D'
-				call lineTrans.addTrans(num_trans,join(trans))
+				call lineTrans.setTrans(join(trans))
 				let trans = []
-			
-				if end_phrase
-					call lineTrans.end("phrase")
-					let end_phrase = 0
-				elseif end_par
-					call lineTrans.end("par")
-					let end_par = 0
-				endif
 			endif
 		endfor
 	endwhile
