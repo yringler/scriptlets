@@ -1,10 +1,11 @@
-let LineTranslator = { "source":[], "trans":[]} 
-let LineTranslator = { "upto": 0}
+let LineTranslator = { "source" : [] , "trans" : [] } 
+let LineTranslator.upto = 0
 
 " Individual translation units
 " stored in list LineTranslator.trans
 let Trans = { "source": "", "trans": "", "comment": "" }
-let Trans = { "end_phrase":0, "end_par":0 }
+let Trans.end_phrase = 0
+let Trans.end_par = 0
 
 " upto is number of words that have been translated
 " numTrans is number of *translations* which could be a smaller number
@@ -32,34 +33,35 @@ endfunction
 function! LineTranslator.join() dict
 	" mine means that from here to endmine newlines are in the world of
 	" LineTranslator. Used in scripts which smoosh around the translation
-	let string = "mine\n"
+	" in list because \n not intrepreted by setline()
+	let list = ["mine"]
 	
 	for i in self.trans
-		let string .= i.source . "\n"
+		call add(list, i.source)
 		" even if trans == "" - parsing expects every *other* line to
 		" be source
-		let string .= i.trans . "\n"
+		call add(list, i.trans)
 
 		if i.end_phrase
-			let string .= "\n"
+			call add(list, "")
 		elseif i.end_par 
-			let string .= "\n\n"
+			call extend(list, ["",""])
 		endif
-
 	endfor
 
-	return string . "endmine\n"
+	return list + ["endmine"]
 endfunction
 
 " add translation. num is number of words being translated. 
-function! LineTranslator.trans(num, trans) dict
+function! LineTranslator.addTrans(num, arg) dict
 	" this is awsome! *four* trans variables in diffrent scope!
-	let trans = deepcopy(g:Trans)
-	let trans.trans = a:trans
+	let tmp_trans = deepcopy(g:Trans)
+	let tmp_trans.trans = a:arg
 	" subtract 1 - eg upto=0,num=2: [0 : 0+2-1] gets two: upto and after
-	let trans.source = join(self.source[self.upto : self.upto+a:num-1])
+	let tmp_trans.source = join(self.source[self.upto : self.upto +a:num-1])
 
-	add(self.trans, deepcopy(trans))
+	call add(self.trans, deepcopy(tmp_trans))
+	let self.upto += a:num
 endfunction
 
 " arg: "phrase" or "par" short for paragraph. Any string containing par will
@@ -105,9 +107,9 @@ endfunction
 
 function! LineTranslator.genPrompt() dict
 	let hist_start = self.upto < 10? 0: self.upto - 10
-	let line1 = FlipString(join(self.source[hist_start : self.upto-1]))
-	let line2 = FlipString(join(self.source[self.upto : self.upto+9]))
-	let line3 = FlipString(join(self.source[self.upto+10 : self.upto+20]))
+	let line1 = FlipString(join(self.source[hist_start : self.upto -1]))
+	let line2 = FlipString(join(self.source[self.upto : self.upto +9]))
+	let line3 = FlipString(join(self.source[self.upto +10 : self.upto +20]))
 	let line4 = "\n" . line2 . ": "
 	
 	if self.upto > 0
@@ -119,95 +121,107 @@ function! LineTranslator.genPrompt() dict
 	return prompt
 endfunction
 
+function! LineTranslator.command(cmd) dict
+	if a:cmd == 'a'		" append
+		self.sourceAppend()
+	elseif a:cmd == 'b'	" backspace
+		self.eraseLast()
+	elseif a:cmd == 'c'	" clear
+		self.noEnd()
+	elseif a:cmd == 'f'	" frase
+		self.end("phrase")
+	elseif a:cmd == 'p'	" paragraph
+		self.end("par")
+	else 
+		echo ERROR
+		finish
+	endif
+	continue
+endfunction
+
+
 " this function is embaressingly long, but very straight-forward, and
 " hopefully it will shrink soon enough
+" update: this function is a complete mess and needs to shring NOW
 function! TranslateLine()
-	let lineTranslator = deepcopy(LineTranslator)
-	let lineTranslator.src = split(getline("."))
+	let lintTrans = deepcopy(g:LineTranslator)
+	let lintTrans.source = split(getline("."))
 
-	" first get number of words this section will translate
-	" if get new number and num_trans is not 0, this means that the phrase
-	" wasn't tranlated, and an empty trans is added with that number
 	let num_trans = 0
-	let trans = ""
+	let last_was_empty = 0
+	" list preferable to avoid space combining stuff
+	let trans = []
 	let end_phrase = 0
 	let end_par = 0
 
 	" keep requesting further input untill the whole line is translated
 	" todo: add stop-here command
-	while lineTranslator.upto < len(lineTranslator.src)
-		let input = split(input(lineTranslator.genPrompt()))
+	
+	while lintTrans.upto < len(lintTrans.source)
+		let input = split(input(lintTrans.genPrompt()))
 		" process a command
 		if len(input) == 1
-			word = input[0]
-			if word == 'a'		" append
-				lineTranslator.sourceAppend()
-			elseif word == 'b'	" backspace
-				lineTranslator.eraseLast()
-			elseif word == 'c'	" clear
-				lineTranslator.noEnd()
-			elseif word == 'f'	" frase
-				lineTranslator.end("phrase")
-			elseif word == 'p'	" paragraph
-				lineTranslator.end("par")
-			else 
-				echo ERROR
-				finish
-			endif
+			call lintTrans.command(input[0])
 			continue
 		endif
 
 		" process one line of translation input
 		for i in range(len(input))
-			if input[i] !~ '\D'
-				if num_trans != 0
-					lineTranslator.trans(num_trans,"")
+			let word = input[i]
+			if word !~ '\D'
+				" if input has two consequtive numbers
+				if last_was_empty
+					call lintTrans.addTrans(num_trans,"")
 				endif
-				let num_trans = input[i]
+				let num_trans = word
+				" I hate flags
+				let last_was_empty = 1
+				continue
 			endif
 			" if / or // before digit or end of current
 			" translation input, set current translation unit as
 			" end of phrase. But method edits last added so set
 			" flag to set when trans is added.
-			if i+1 == len(input)  || input[i+1] !~ '\D'
-				if input[i] == '/'
+			if word == '/'
+				if i+1 == len(input)  || input[i+1] !~ '\D'
 					let end_phrase = 1
-				elseif input[i] == '//'
-					let end_par = 1
+				elseif input[i-1] !~ '\D'
+					call lintTrans.end("phrase")
 				endif
 			" if right after digit set as beggining of phrase
 			" this is done by saying that the last translation
 			" unit was the end
-			elseif i != 0 && input[i-1] !~ '\D'
-				if input[i] == '/'
-					lineTranslator.end("phrase")
-				elseif input[i] == '//'
-					lineTranslator.end("par")
+			elseif word == '//'
+				if i+1 == len(input)  || input[i+1] !~ '\D'
+					let end_par = 1
+				elseif input[i-1] !~ '\D'
+					call lintTrans.end("par")
 				endif
-			endif
-			if word =~ '\\\d' || word =~ '\/'
+			elseif word =~ '\\\d' || word =~ '\/'
 				       let word = substitute(word, '\\', '', '')
 			endif
-			
-			let trans .= word
-		endfor
-		
-		if num_trans < 1
-			echo ERROR
-			finish
-		endif
 
-		lineTranslator.trans(num_trans,trans)
-		trans = ""
+			" wow this code is a complete mess
+			" needs clean up
+			if word != '/' && word != '//'
+				call add(trans, word)
+			endif
+			let last_was_empty = 0
 		
-		if end_phrase
-			lineTranslator.end("phrase")
-			let end_phrase = 0
-		elseif end_par
-			lineTranslator.end("par")
-			let end_par = 0
-		endif
+			if i+1 == len(input)  || input[i+1] !~ '\D'
+				call lintTrans.addTrans(num_trans,join(trans))
+				let trans = []
+			
+				if end_phrase
+					call lintTrans.end("phrase")
+					let end_phrase = 0
+				elseif end_par
+					call lintTrans.end("par")
+					let end_par = 0
+				endif
+			endif
+		endfor
 	endwhile
 
-	setline(line("."), lineTranslator.join())
+	call setline(line("."), lintTrans.join())
 endfunction
