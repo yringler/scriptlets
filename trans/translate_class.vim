@@ -198,7 +198,6 @@ function! TranslateLine()
 			if word =~ '\\\d' || word =~ '\/'
 			       let word = substitute(word, '\\', '', '')
 			endif
-
 		
 			if i+1 == len(input)  || input[i+1] !~ '\D'
 				call lineTrans.setTrans(join(trans))
