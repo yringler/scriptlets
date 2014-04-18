@@ -46,8 +46,8 @@ endfunction
 " return string with the whole business - source&trans - properly formatted
 function! LineTranslator.join() dict
 	" mine means that from here to endmine newlines are in the world of
-	" LineTranslator. Used in scripts which smoosh around the translation
-	" in list because \n not intrepreted by setline()
+	" LineTranslator, used in scripts which smoosh around the translation.
+	" In list because \n not intrepreted by setline()
 	let list = ["mine"]
 	
 	for i in self.trans
