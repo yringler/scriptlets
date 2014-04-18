@@ -17,7 +17,7 @@ endfunction
 
 "adds current source word to latest translated source
 function! LineTranslator.sourceAppend() dict
-	self.trans[-1].source += self.source[self.upto]
+	let self.trans[-1].source .= ' ' . self.source[self.upto]
 	let self.upto += 1
 	" don't clear flags
 endfunction
@@ -143,8 +143,8 @@ endfunction
 " hopefully it will shrink soon enough
 " update: this function is a complete mess and needs to shring NOW
 function! TranslateLine()
-	let lintTrans = deepcopy(g:LineTranslator)
-	let lintTrans.source = split(getline("."))
+	let lineTrans = deepcopy(g:LineTranslator)
+	let lineTrans.source = split(getline("."))
 
 	let num_trans = 0
 	let last_was_empty = 0
@@ -156,11 +156,11 @@ function! TranslateLine()
 	" keep requesting further input untill the whole line is translated
 	" todo: add stop-here command
 	
-	while lintTrans.upto < len(lintTrans.source)
-		let input = split(input(lintTrans.genPrompt()))
+	while lineTrans.upto < len(lineTrans.source)
+		let input = split(input(lineTrans.genPrompt()))
 		" process a command
 		if len(input) == 1
-			call lintTrans.command(input[0])
+			call lineTrans.command(input[0])
 			continue
 		endif
 
@@ -170,7 +170,7 @@ function! TranslateLine()
 			if word !~ '\D'
 				" if input has two consequtive numbers
 				if last_was_empty
-					call lintTrans.addTrans(num_trans,"")
+					call lineTrans.addTrans(num_trans,"")
 				endif
 				let num_trans = word
 				" I hate flags
@@ -185,7 +185,7 @@ function! TranslateLine()
 				if i+1 == len(input)  || input[i+1] !~ '\D'
 					let end_phrase = 1
 				elseif input[i-1] !~ '\D'
-					call lintTrans.end("phrase")
+					call lineTrans.end("phrase")
 				endif
 			" if right after digit set as beggining of phrase
 			" this is done by saying that the last translation
@@ -194,7 +194,7 @@ function! TranslateLine()
 				if i+1 == len(input)  || input[i+1] !~ '\D'
 					let end_par = 1
 				elseif input[i-1] !~ '\D'
-					call lintTrans.end("par")
+					call lineTrans.end("par")
 				endif
 			elseif word =~ '\\\d' || word =~ '\/'
 				       let word = substitute(word, '\\', '', '')
@@ -208,19 +208,19 @@ function! TranslateLine()
 			let last_was_empty = 0
 		
 			if i+1 == len(input)  || input[i+1] !~ '\D'
-				call lintTrans.addTrans(num_trans,join(trans))
+				call lineTrans.addTrans(num_trans,join(trans))
 				let trans = []
 			
 				if end_phrase
-					call lintTrans.end("phrase")
+					call lineTrans.end("phrase")
 					let end_phrase = 0
 				elseif end_par
-					call lintTrans.end("par")
+					call lineTrans.end("par")
 					let end_par = 0
 				endif
 			endif
 		endfor
 	endwhile
 
-	call setline(line("."), lintTrans.join())
+	call setline(line("."), lineTrans.join())
 endfunction
