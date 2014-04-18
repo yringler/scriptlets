@@ -20,6 +20,10 @@ function! LineTranslator.setSource(num) dict
 	let self.upto += a:num
 endfunction
 
+function! LineTranslator.setComment(comment) dict
+	let self.trans[-1].comment = a:comment
+endfunction
+
 " arg [start/end][phrase/par]
 " skips add if logical, based on last
 function! LineTranslator.setDiv(div) dict
@@ -51,9 +55,17 @@ function! LineTranslator.join() dict
 		" even if trans == "" - parsing expects every *other* line to
 		" be source
 		call add(list, i.trans)
+		
+		let added_comment = 0
+		if i.comment != ""
+			call extend(list, [ "comment" i.comment])
+			added_comment = 1
+		endif
 
 		if i.div =~ "start"
-			let idx = -2	" back up over trans and source
+			" back up over trans and source (and comment, if
+			" there)
+			let idx = -2 - added_comment
 		elseif i.div =~ "end"
 			let idx = len(list)
 		endif
@@ -150,6 +162,19 @@ function! LineTranslator.command(cmd) dict
 	endif
 endfunction
 
+" comment : ... trans [ comment ] ...
+" assumes that starting after {
+function GetComment(input)
+	let comment = []
+	for i in input
+		if i == '}'
+			break
+		endif
+		call add(comment,i)
+	endfor
+	return comment
+endfunction
+
 function! TranslateLine()
 	let lineTrans = deepcopy(g:LineTranslator)
 	let lineTrans.source = split(getline("."))
@@ -189,6 +214,13 @@ function! TranslateLine()
 					echo ERROR
 					finish
 				endif
+			elseif word == '{'
+				let comment = GetComment(input[i+1 : ])
+				LineTranslator.setComment(comment)
+			" can't skip i because goes through list. keep current
+			" in, remove from next to one after length of comment,
+			" because comment ends before closing }
+				call remove(input, i+1+len(comment)+1)
 			else
 				call add(trans, word)
 			endif
