@@ -222,7 +222,7 @@ function! TranslateLine()
 			" can't skip i because goes through list. keep current
 			" in, remove from next to one after length of comment,
 			" because comment ends before closing }
-				call remove(input, i+1+len(comment)+1)
+				call remove(input, i+1, i+len(comment)+1)
 			else
 				call add(trans, word)
 			endif
