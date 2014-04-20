@@ -99,6 +99,13 @@ function! LineTranslator.join() dict
 		if i.div =~ 'start\|end'
 			call extend(list, [i.div], idx)
 		endif
+
+		if i.div =~ 'startend'
+			" -1 because idx is for insert *before*
+			" to access before directly, subtract 1
+			let list.[idx-1] = "start" . i.div
+			call add(list, "end" . i.div)
+		endif
 	endfor
 
 	return list + ["endmine"]
