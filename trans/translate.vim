@@ -53,21 +53,21 @@ function! LineTranslator.appendComment(a:comment) dict
 endfunction
 
 " arg [start/end][phrase/par]
-" skips add if logical, based on last
 function! LineTranslator.setDiv(div) dict
 	if a:div !~ '\(start\|end\)\(par\|phrase\)'
 		echo ERROR
 		finish
 	endif
-
-	if len(self.trans)  > 1
-		if a:div == 'startphrase' && self.trans[-2].div =~ "end"
-			return
-		elseif a:div == 'startpar' && self.trans[-2].div == "endpar"
-			return
-		endif
-	endif
-
+	
+	"
+	" TODO: if a start, set last as end if isn't already, look for its
+	" start
+	" if an end, look for start
+	"
+	" what if one is both?...
+	" startend\(par|phrase\) 
+	"
+	
 	let self.trans[-1].div = a:div
 endfunction
 
