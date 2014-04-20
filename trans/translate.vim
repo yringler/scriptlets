@@ -4,7 +4,15 @@ let LineTranslator.upto = 0
 " Individual translation units
 " stored in list LineTranslator.trans
 " div must match \(start\|end\)\(phrase\|par\)
-let Trans = { "source": "", "trans": "", "div": "", "comment": "" }
+let Trans = { "source": "", "trans": "", "div": "", "comment": [] }
+
+function! AppendString(first, second)
+	if a:first != ""
+		return a:first . " " . a:second
+	else
+		return a:second
+	endif
+endfunction
 
 function! LineTranslator.add() dict
 	call add(self.trans, deepcopy(g:Trans))
@@ -14,14 +22,34 @@ function! LineTranslator.setTrans(trans) dict
 	let self.trans[-1].trans = a:trans
 endfunction
 
+function! LineTranslator.appendTrans(trans) dict
+	let self.trans[-1].trans = AppendString(self.trans[-1].trans, a:trans)
+endfunction
+
 function! LineTranslator.setSource(num) dict
 	let source = join(self.source[self.upto : self.upto + a:num-1])
 	let self.trans[-1].source = source
 	let self.upto += a:num
 endfunction
 
+"adds current source word to latest translated source
+function! LineTranslator.appendSource() dict
+	let self.trans[-1].source .= ' ' . self.source[self.upto]
+	let self.upto += 1
+endfunction
+
+function! LineTranslator.addComment() dict
+	call add(self.trans[-1].comment, "")
+	self.appendTrans("*" . len(self.trans[-1].comment))
+endfunction
+
 function! LineTranslator.setComment(comment) dict
-	let self.trans[-1].comment = a:comment
+	let self.trans[-1].comment[-1] = a:comment
+endfunction
+
+function! LineTranslator.appendComment(a:comment) dict
+	let new_comment = AppendString(self.trans[-1].comment[-1], a:comment)
+	let self.trans[-1].comment[-1] = new_comment
 endfunction
 
 " arg [start/end][phrase/par]
@@ -56,26 +84,20 @@ function! LineTranslator.join() dict
 		" be source
 		call add(list, i.trans)
 		
-		let added_comment = 0
-		if i.comment != ""
-			call extend(list, ["comment" , i.comment])
-			" this is the teensiest bit kludgey
-			" set to 2 to back over two lines, as per extend call
-			added_comment = 2
+		for ib in len(i.comment)
+			let list += ["comment " . ib+1 . " " . i.comment[ib]])
 		endif
 
 		if i.div =~ "start"
 			" back up over trans and source (and comment, if
 			" there)
-			let idx = -2 - added_comment
+			let idx = -2 - len(i.comment)
 		elseif i.div =~ "end"
 			let idx = len(list)
 		endif
 
-		if i.div =~ "phrase"
-			call extend(list, [""], idx)
-		elseif i.div =~ "par"
-			call extend(list, ["",""], idx)
+		if i.div =~ 'start\|end'
+			call extend(list, [i.div], idx)
 		endif
 	endfor
 
@@ -113,20 +135,6 @@ function! LineTranslator.genPrompt() dict
 	return prompt
 endfunction
 
-" upto is number of words that have been translated
-" numTrans is number of *translations* which could be a smaller number
-" because a translation unit (or a Trans) could translate more than one word
-" at at time
-function! LineTranslator.numTrans() dict
-	return len(self.trans)
-endfunction
-
-"adds current source word to latest translated source
-function! LineTranslator.sourceAppend() dict
-	let self.trans[-1].source .= ' ' . self.source[self.upto]
-	let self.upto += 1
-endfunction
-
 " erases the most recent translation added
 function! LineTranslator.eraseLast() dict
 	let num_words_back = len(split(self.trans[-1].source))
@@ -149,7 +157,7 @@ endfunction
 
 function! LineTranslator.command(cmd) dict
 	if a:cmd == 'a'		" append
-		call self.sourceAppend()
+		call self.appendSource()
 	elseif a:cmd == 'b'	" backspace
 		call self.eraseLast()
 	elseif a:cmd == 'c'	" clear
@@ -196,7 +204,8 @@ function! TranslateLine()
 		endif
 
 		" process one line of translation input
-		for i in range(len(input))
+		let i = 0
+		while i < len(input)
 			let word = input[i]
 
 			if word !~ '\D'
@@ -217,12 +226,11 @@ function! TranslateLine()
 					finish
 				endif
 			elseif word == '{'
-				let comment = GetComment(input[i+1 : ])
+				let comment = GetComment(input[i+1] : ])
+				LineTranslator.addComment()
 				LineTranslator.setComment(comment)
-			" can't skip i because goes through list. keep current
-			" in, remove from next to one after length of comment,
-			" because comment ends before closing }
-				call remove(input, i+1, i+len(comment)+1)
+			" + 1 gets to closing } , +1 at end moves to next
+				let i += len(comment) + 1
 			else
 				call add(trans, word)
 			endif
@@ -235,7 +243,9 @@ function! TranslateLine()
 				call lineTrans.setTrans(join(trans))
 				let trans = []
 			endif
-		endfor
+
+			let i += 1
+		endwhile
 	endwhile
 
 	" clear line on but don't clear following lines
