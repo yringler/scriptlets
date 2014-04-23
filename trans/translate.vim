@@ -52,7 +52,7 @@ function! LineTranslator.appendComment(a:comment) dict
 	let self.trans[-1].comment[-1] = new_comment
 endfunction
 
-" arg [start/end][phrase/par]
+" arg [start/end/startend][phrase/par]
 function! LineTranslator.setDiv(div) dict
 	if a:div !~ '\(start\|end\)\(par\|phrase\)'
 		echo ERROR
