@@ -40,8 +40,8 @@ endfunction
 """""""""""""""""""""
 
 let Atom = { "source": [], "trans": [], "comment": [] }
-" phrases: list of atoms
 
+" phrases: list of atoms
 let Phrase = deepcopy(Div)
 call extend(Phrase, { "div":"phrase", "subClass":Atom, "subkey":"atoms"})
 call extend(Phrase, { "atoms":[Atom] })
