@@ -125,7 +125,7 @@ function! Translate.add(num) dict
 	let self.upto += a:num
 endfunction
 
-function! Translate.div(div) dict
+function! Translate.setDiv(div) dict
 	if a:div !~ '^\(start\|end\)\(par\|phrase\)$'
 		throw "ERROR:div:bad arg"
 
