@@ -117,6 +117,10 @@ function! Atom.read() dict
 	call self.readKey("comment", "comment")
 endfunction
 
+"""""""""""""""""""""""
+" translate functions "
+"""""""""""""""""""""""
+
 " arg: num source to add
 function! Translate.add(num) dict
 	let atom = deepcopy(Atom)
