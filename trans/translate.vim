@@ -8,7 +8,7 @@
 let Div = { "div" : "", "subClass" : {}, "subKey" : "" }
 
 function! Require(div) dict
-	if getline(".") != "start".a:div || search("end."a:div, "n") == -1
+	if getline(".") != "start".a:div || search("end".a:div, "n") == -1
 		throw "error:Require:" . a:start
 	endif
 endfunction
