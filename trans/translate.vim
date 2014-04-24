@@ -19,7 +19,7 @@ function! Div.read() dict
 	while getline(".") != "end" . self.div
 		let sub = deepcopy(self.subClass)
 		call sub.read()
-		let self[subKey] += [deepcopy(sub)]
+		let self[self.subKey] += [deepcopy(sub)]
 	endwhile
 	normal j
 endfunction
@@ -48,7 +48,8 @@ function! Div.gather() dict
 	let list = [[][][]]
 	for i in self[self.subKey]
 		let sub_gather = i.gather()
-		let list[0] .= CombineString(list[0], sub_gather.source)
+		"let list[0] .= CombineString(list[0], sub_gather.source)
+		let list[0] += [sub_gather.source]
 		let list[1] += sub_gather.trans
 		let list[2] += sub_gather.comment
 	endfor
