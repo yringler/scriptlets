@@ -39,6 +39,7 @@ endfunction
 " class definitions "
 """""""""""""""""""""
 
+" trans left empty so add starts at beggining
 let Atom = { "source": [], "trans": [], "comment": [] }
 
 " phrases: list of atoms
