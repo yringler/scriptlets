@@ -267,3 +267,20 @@ function! Translate.styleSplit(style)
 		return master_list[a:style]
 	endif
 endfunction
+
+function! PrintStyleList(line, style_list)
+	call append(a:line, a:style_list[0])
+	call append(a:line+1, a:style_list[1])
+	call append(a:line+2, a:style_list[2])
+endfunction
+
+" arg : list of styleSplit() returns
+" replaces line on, appends after that
+function! PrintStyleListList(style_list_list)
+	normal ddk
+	let offset = 0
+	for i in style_list_list
+		call PrintStyleList(line(".") + offset, style_list_list)
+		let offset += 3
+	endfor
+endfunction
