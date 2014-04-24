@@ -245,7 +245,7 @@ endfunction
 
 
 " atom|phrase|par|mine
-"" this function causes an evil amount of repeated work
+"" this function causes an evil amount of unused work
 "" 21st century programming is awesome
 function! Translate.styleSplit(style)
 	master_list = { "atoms":[], "phrases":[], "pars":[], "mine":[] }
