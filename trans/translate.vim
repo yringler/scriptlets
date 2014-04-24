@@ -25,7 +25,7 @@ function! Div.read() dict
 endfunction
 
 
-function! div.rawSplit() dict
+function! Div.rawSplit() dict
 	let list = ["start" . self.div]
 	for i in self[self.subKey]
 		let list += i.rawSplit()
@@ -34,6 +34,40 @@ function! div.rawSplit() dict
 	return list
 endfunction
 
+function! CombineString(first, second)
+	if a:first != ""
+		return a:first . " " . a:second
+	else
+		return a:second
+	endif
+endfunction
+
+
+" gather all subdiv source into one list, all subdiv trans into another, etc
+function! Div.gather() dict
+	let list = [[][][]]
+	for i in self[self.subKey]
+		let sub_gather = i.gather()
+		let list[0] .= CombineString(list[0], sub_gather.source)
+		let list[1] += sub_gather.trans
+		let list[2] += sub_gather.comment
+	endfor
+	return list
+endfunction
+
+" as before, but prepare for printing
+" source is good as is, but join trans, numbering notes when there
+" comment stays seperate, bug with numbers at start
+function! Div.styleSplit() dict
+	let gather_list = self.gather()
+	let list = [gather_list.source, [], []]
+	" use length of 2, empty means no comments
+	for i in len(gather_list[2])
+		let list[1] += [CombineString(gather_list[1][i], "{".i+1."}")]
+		let list[2] += [CombineString(gather_list[2][i], i+1.")")]
+	endfor
+	return [list[0], join(list[1]), list[2]]
+endfunction
 
 """""""""""""""""""""
 " class definitions "
@@ -57,6 +91,7 @@ call extend(Translate, { "pars":[Par] })
 
 call extend(Translate, { "source":[], "pars":[Par], "upto":0 })
 let Translate.parentRawSplit = Div.rawSplit
+let Translate.partentStyleSplit = Div.styleSplit
 " flag: if end of input is end of mine [= text under translate control]
 let Translate.startmine = 1
 " yes|no|ask
@@ -117,6 +152,12 @@ function! Atom.read() dict
 	call self.readKey("trans", "trans")
 	call self.readKey("comment", "comment")
 endfunction
+
+function! Atom.gather() dict
+	return self
+endfunction
+
+let Atom.styleSplit = Div.styleSplit
 
 """""""""""""""""""""""
 " translate functions "
@@ -202,5 +243,27 @@ function! Translate.rawSplit() dict
 	return list
 endfunction
 
-" word|phrase|par
-function! Translate.styleSplit("")
+
+" atom|phrase|par|mine
+"" this function causes an evil amount of repeated work
+"" 21st century programming is awesome
+function! Translate.styleSplit(style)
+	master_list = { "atoms":[], "phrases":[], "pars":[], "mine":[] }
+	master_list.mine = self.partentStyleSplit()
+
+	for par in self.pars
+		let master_list["pars"] += par.styleSplit()
+		for phrase in par.phrases
+			let master_list["phrases"] += phrase.styleSplit()
+			for atom in phrase.atoms
+				let master_list["atoms"] += atom.styleSplit()
+			endfor
+		endfor
+	endfor
+
+	if a:style != 'atom|phrase|par|mine'
+		throw "ERROR:Translate.styleSplit:bad arg:" . a:style
+	else
+		return master_list[a:style]
+	endif
+endfunction
