@@ -16,7 +16,7 @@ endfunction
 function! Div.read() dict
 	call Require(self.div)
 	normal j
-	while getline(".") != "end" . a.div
+	while getline(".") != "end" . self.div
 		let sub = deepcopy(self.subClass)
 		call sub.read()
 		let self[subKey] += [deepcopy(sub)]
