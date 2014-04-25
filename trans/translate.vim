@@ -1,3 +1,24 @@
+" seperate string in trans for each comment
+" this is here just for show - theoretically its used, but not explicetly
+" see Atom.gather()
+let FlatDiv = { "source": "", "trans":[], "comment":[], "ends": "" ] 
+
+" number refers to footnote numbers
+function! Number(flatdiv_list)
+	let list = []
+	let foot_num = 1
+	for flatdiv in a:flatdiv_list
+		" trans can have 1 even if comment is empty
+		for i in range(len(a:flatdiv_list.comment))
+			let flatdiv.trans[i] .= "{foot_num}"
+			let comment = foot_num.") ".flatdiv.comment[i]
+			let flatdiv.comment[i] = comment
+		endfor
+		let list += deepcopy([flatdiv])
+	endfor
+	return deepcopy(list)
+endfunction
+
 """"""""""""""""""""""
 " generic base class "
 """"""""""""""""""""""
@@ -24,14 +45,14 @@ function! Div.read() dict
 	normal j
 endfunction
 
-
+" creates of strings for raw output
 function! Div.rawSplit() dict
 	let list = ["start" . self.div]
 	for i in self[self.subKey]
 		let list += i.rawSplit()
 	endfor
 	let list += ["end" . self.div]
-	return list
+	return deepcopy(list)
 endfunction
 
 function! CombineString(first, second)
@@ -42,57 +63,44 @@ function! CombineString(first, second)
 	endif
 endfunction
 
-
-" gather all subdiv source into one list, all subdiv trans into another, etc
+" gather all FlatDivs  into one list, with div info
 function! Div.gather() dict
-	let list = [[][][]]
+	let list = []
 	for i in self[self.subKey]
-		let sub_gather = i.gather()
-		"let list[0] .= CombineString(list[0], sub_gather.source)
-		let list[0] += [sub_gather.source]
-		let list[1] += sub_gather.trans
-		let list[2] += sub_gather.comment
+		let list += i.gather()
 	endfor
-	return list
+	let list[-1].ends = self.div
+	return deepcopy(list)
 endfunction
 
-" as before, but prepare for printing
-" source is good as is, but join trans, numbering notes when there
-" comment stays seperate, bug with numbers at start
-function! Div.styleSplit() dict
-	let gather_list = self.gather()
-	let list = [gather_list.source, [], []]
-	" use length of 2, empty means no comments
-	for i in len(gather_list[2])
-		let list[1] += [CombineString(gather_list[1][i], "{".i+1."}")]
-		let list[2] += [CombineString(gather_list[2][i], i+1.")")]
-	endfor
-	return [list[0], join(list[1]), list[2]]
+" number refers to footnote numbers
+function! Div.numberGather() dict
+	return Number(self.gather())
 endfunction
 
 """""""""""""""""""""
 " class definitions "
 """""""""""""""""""""
 
-" trans left empty so add starts at beggining
 let Atom = { "source": [], "trans": [], "comment": [] }
 
 " phrases: list of atoms
+" atoms left empty so add is to start
 let Phrase = deepcopy(Div)
 call extend(Phrase, { "div":"phrase", "subClass":Atom, "subkey":"atoms"})
-call extend(Phrase, { "atoms":[Atom] })
+call extend(Phrase, { "atoms":[] })
 
 let Par = deepcopy(Div)
 call extend(Par, { "div":"par", "subClass":Phrase, "subkey":"phrases"})
-call extend(Par, { "phrases":[Phrase] })
+call extend(Par, { "phrases":[deepcopy(Phrase)] })
 
 let Translate = deepcopy(Div)
 call extend(Translate, { "div":"mine", "subClass":Par, "subkey":"pars"})
-call extend(Translate, { "pars":[Par] })
+call extend(Translate, { "pars":[deepcopy(Par)] })
 
+" source: space seperated source
 call extend(Translate, { "source":[], "pars":[Par], "upto":0 })
 let Translate.parentRawSplit = Div.rawSplit
-let Translate.partentStyleSplit = Div.styleSplit
 " flag: if end of input is end of mine [= text under translate control]
 let Translate.startmine = 1
 " yes|no|ask
@@ -127,16 +135,17 @@ function! Atom.rawSplit() dict
 	if len(self.comment) > 0)
 		let list += ["startcomment"] + self.comment + ["endcomment"]
 	endif
-	return list + ["endatom"]
+	return deepcopy(list + ["endatom"])
 endfunction
 
 " start at start(.*)
 " ends off line past end\1
-function! Atom.readKey(key,div) 
+" div is same as key
+function! Atom.readKey(div) 
 	call Require(a:div)
 	normal j
-	while getline(".") != a:end
-		let self[a:key] += [getline(".")]
+	while getline(".") != "end" . a:div
+		let self[a:div] += [getline(".")]
 		normal j
 	endwhile
 	normal j
@@ -144,21 +153,21 @@ endfunction
 
 " load Atom data from file. start at startatom
 function! Atom.read() dict
-	call Require("startatom")
+	call Require("atom")
 	" startatom -> source -> <source>
 	normal 2j
 	let self.source = [getline(".")]
 	" -> starttrans
 	normal j
-	call self.readKey("trans", "trans")
-	call self.readKey("comment", "comment")
+	call self.readKey("trans")
+	call self.readKey("comment")
 endfunction
 
 function! Atom.gather() dict
-	return self
+	" this is to tempting to split up
+	" returns a list of FlatDivs 
+	return [extend(deepcopy(self),{ "ends":"" })]
 endfunction
-
-let Atom.styleSplit = Div.styleSplit
 
 """""""""""""""""""""""
 " translate functions "
@@ -168,29 +177,30 @@ let Atom.styleSplit = Div.styleSplit
 function! Translate.add(num) dict
 	let atom = deepcopy(Atom)
 	let atom.source = self.source[self.upto : self.upto+a:num-1]
-	let self.pars[-1].phrases[-1].atoms[-1] = deepcopy(atom)
+	let self.pars[-1].phrases[-1].atoms += deepcopy(atom)
 	let self.upto += a:num
 endfunction
 
 function! Translate.setDiv(div) dict
 	if a:div !~ '^\(start\|end\)\(par\|phrase\)$'
-		throw "ERROR:div:bad arg"
+		throw "ERROR:div:bad arg:" . a:div
+	endif
 
 	let atom = deepcopy(self.pars[-1].phrases[-1].atoms[-1])
 	call remove(self.pars[-1].phrases[-1].atoms, -1)
 	
 	if a:div =~ 'end'
-		call add(self.pars[-1].phrases[-1], deepcopy(atom))
+		call add(self.pars[-1].phrases[-1].atoms, deepcopy(atom))
 	endif
 
 	if a:div =~ 'par'
-		call add(self.pars[-1], deepcopy(Pars))
+		call add(self.pars, deepcopy(Pars))
 	elseif a:div =~ "phrase"
-		call add(self.pars[-1].phrases[-1], deepcopy(Phrase))
+		call add(self.pars[-1].phrases, deepcopy(Phrase))
 	endif
 
 	if a:div =~ 'start'
-		call add(self.pars[-1].phrases[-1], deepcopy(atom))
+		call add(self.pars[-1].phrases[-1].atoms, deepcopy(atom))
 	endif
 endfunction
 
@@ -220,12 +230,14 @@ function! Translate.checkCont() dict
 		let self.startmine = 0
 	elseif getline(line) == "endphrase"
 		call self.jumpoffcliff()
+	else
+		let self.startmine = 1
 	endif
 endfunction
 
-" also calls endInput() and clears self
+" also calls endInput()
 function! Translate.rawSplit() dict
-	self.endInput()
+	call self.endInput()
 	let list = self.parentRawSplit()
 
 	if self.startmine == 0
@@ -241,47 +253,39 @@ function! Translate.rawSplit() dict
 		call remove(list, -1)
 	endif
 
-	return list
+	return deepcopy(list)
 endfunction
 
+" sep_div: div that trans and src are seperated at
+" eg phrase: prints entire source of phrase, then entire trans (then comments)
+" nl_div[=newline_div]: what is the smallest div between which there is a new
+" line to seperate
+" eg phrase: between every phrase *and* every par but *not* every atom there
+" is a new line
+function! Translate.styleSplit(sep_div, nl_div)
+	let DivNum = { "atom":1, "phrase":2, "par":3, "mine":4 }
+	let gather = self.gather()
+	let list = []
 
-" atom|phrase|par|mine
-"" this function causes an evil amount of unused work
-"" 21st century programming is awesome
-function! Translate.styleSplit(style)
-	master_list = { "atoms":[], "phrases":[], "pars":[], "mine":[] }
-	master_list.mine = self.partentStyleSplit()
-
-	for par in self.pars
-		let master_list["pars"] += par.styleSplit()
-		for phrase in par.phrases
-			let master_list["phrases"] += phrase.styleSplit()
-			for atom in phrase.atoms
-				let master_list["atoms"] += atom.styleSplit()
+	let Sep = { "source":[], "trans":[], "comment":[] }
+	let sep = deepcopy(Sep)
+	for atom in gather
+		let sub += atom
+		if DivNum[atom.div] >= DivNum[a:sep_div]
+			let sub = Number(sub)
+			for i in sub
+				let sep.source += [atom.source]
+				let sep.trans += [join(atom.trans)]
+				let sep.comment += atom.comment
+				if DivNum[atom.div] >= DivNum[a:nl_div]
+					let sep.source += []
+					let sep.trans += []
+				endif
 			endfor
-		endfor
+			let list += sep.source + sep.trans + sep.comment
+			let sep = deepcopy(Sep)
+		endif
 	endfor
 
-	if a:style != 'atom|phrase|par|mine'
-		throw "ERROR:Translate.styleSplit:bad arg:" . a:style
-	else
-		return master_list[a:style]
-	endif
-endfunction
-
-function! PrintStyleList(line, style_list)
-	call append(a:line, a:style_list[0])
-	call append(a:line+1, a:style_list[1])
-	call append(a:line+2, a:style_list[2])
-endfunction
-
-" arg : list of styleSplit() returns
-" replaces line on, appends after that
-function! PrintStyleListList(style_list_list)
-	normal ddk
-	let offset = 0
-	for i in style_list_list
-		call PrintStyleList(line(".") + offset, style_list_list)
-		let offset += 3
-	endfor
+	return list
 endfunction
