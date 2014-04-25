@@ -280,7 +280,7 @@ function TrimList(list)
 	endwhile
 endfunction
 
-" sep_div: {<div>:[<[""] for every new line you want]}: what div(and
+" sep_div: {<div>:[<[""]>]} for every new line you want]}: what div(and
 " also done at greater then) to seperate source from trans
 "
 " nl_divs[=newline_divs]: sep_div-style dictionary, with keys for each div
