@@ -319,10 +319,11 @@ function! Translate.styleSplit(sep_div, nl_sourcedivs, nl_transdivs) dict
 
 		let sorted = sub_gather.sort()
 		call map(sorted, "TrimList(v:val)")
-		let list += sorted.source + sorted.trans + sorted.comments 
+		let list += deepcopy(sorted.source) + deepcopy(sorted.trans)
+	       	let list += deepcopy(sorted.comments)
 		let list += values(a:sep_div)[0] 
 	endwhile
 	let list = TrimList(list)
 
-	return list
+	return deepcopy(list)
 endfunction
