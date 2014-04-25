@@ -192,6 +192,19 @@ function! Translate.add(num) dict
 	let self.upto += a:num
 endfunction
 
+function! Translate.genPrompt() dict
+	let list = []
+	for [start,end] in [[-10,-1], [0,9], [10,19]]
+		let start += self.upto
+		let end += self.upto
+		if start > 0 && end < len(self.source)
+			let list += self.source[start:end]
+		endif
+	endfor
+	let list += [""] + [join(self.source[self.upto:self.upto + 9]) . ": "]
+	return list[0] == "" ? list[1] : join(list,"\n")
+endfunction
+
 function! Translate.setDiv(div) dict
 	if a:div !~ '^\(start\|end\)\(par\|phrase\)$'
 		throw "ERROR:div:bad arg:" . a:div
@@ -286,7 +299,7 @@ endfunction
 " nl_divs[=newline_divs]: sep_div-style dictionary, with keys for each div
 " where should add NL within source and trans, with value of [[]..] for each
 " new line wanted
-function! Translate.styleSplit(sep_div, nl_sourcedivs, nl_transdivs)
+function! Translate.styleSplit(sep_div, nl_sourcedivs, nl_transdivs) dict
 	let gather = self.gather()
 	let list = []
 
