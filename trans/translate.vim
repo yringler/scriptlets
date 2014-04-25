@@ -278,14 +278,16 @@ function! Translate.styleSplit(sep_div, nl_div)
 				let sep.trans += [join(atom.trans)]
 				let sep.comment += atom.comment
 				if DivNum[atom.div] >= DivNum[a:nl_div]
-					let sep.source += []
-					let sep.trans += []
+					let sep.source += [""]
+					let sep.trans += [""]
 				endif
 			endfor
 			let list += sep.source + sep.trans + sep.comment
+			let list += [""]
 			let sep = deepcopy(Sep)
 		endif
 	endfor
 
-	return list
+	" the last 2 are extra spaces
+	return list[0:-3]
 endfunction
