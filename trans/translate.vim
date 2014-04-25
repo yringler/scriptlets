@@ -1,24 +1,3 @@
-" seperate string in trans for each comment
-" this is here just for show - theoretically its used, but not explicetly
-" see Atom.gather()
-let FlatDiv = { "source": "", "trans":[], "comment":[], "ends": "" ] 
-
-" number refers to footnote numbers
-function! Number(flatdiv_list)
-	let list = []
-	let foot_num = 1
-	for flatdiv in a:flatdiv_list
-		" trans can have 1 even if comment is empty
-		for i in range(len(a:flatdiv_list.comment))
-			let flatdiv.trans[i] .= "{foot_num}"
-			let comment = foot_num.") ".flatdiv.comment[i]
-			let flatdiv.comment[i] = comment
-		endfor
-		let list += deepcopy([flatdiv])
-	endfor
-	return deepcopy(list)
-endfunction
-
 """"""""""""""""""""""
 " generic base class "
 """"""""""""""""""""""
@@ -73,16 +52,14 @@ function! Div.gather() dict
 	return deepcopy(list)
 endfunction
 
-" number refers to footnote numbers
-function! Div.numberGather() dict
-	return Number(self.gather())
-endfunction
-
 """""""""""""""""""""
 " class definitions "
 """""""""""""""""""""
 
-let Atom = { "source": [], "trans": [], "comment": [] }
+let DivVal = { "atom":1, "phrase":2, "par":3, "mine":4 }
+
+let Atom = { "source": [], "trans":[], "comment":[], "div":"atom" }
+let AtomList = { "atoms":[] }
 
 " phrases: list of atoms
 " atoms left empty so add is to start
@@ -130,7 +107,7 @@ endfunction
 
 function! Atom.rawSplit() dict
 	" source is one line only
-	let list = ["startatom", "source", self.source]
+	let list = ["startatom", "startsource"] + self.source + ["endsource"]
 	let list += ["starttrans"] + self.trans + ["endtrans"]
 	if len(self.comment) > 0)
 		let list += ["startcomment"] + self.comment + ["endcomment"]
@@ -154,19 +131,53 @@ endfunction
 " load Atom data from file. start at startatom
 function! Atom.read() dict
 	call Require("atom")
-	" startatom -> source -> <source>
-	normal 2j
-	let self.source = [getline(".")]
-	" -> starttrans
+	" startatom -> startsource
 	normal j
+	call self.readKey("source")
 	call self.readKey("trans")
 	call self.readKey("comment")
 endfunction
 
 function! Atom.gather() dict
-	" this is to tempting to split up
-	" returns a list of FlatDivs 
-	return [extend(deepcopy(self),{ "ends":"" })]
+	return [deepcopy(self)]
+endfunction
+
+function! AtomList.footnote() dict
+	let foot_num = 1
+	" atom=dict=shallow copy = original edited
+	for atom in self.atoms
+		" trans can have 1 even if comment is empty
+		for i in range(len(atom.comment))
+			let atom.trans[i] .= "{foot_num}"
+			let atom.comment[i] = foot_num . ") " . atom.comment[i]
+			let foot_num ++
+		endfor
+	endfor
+endfunction
+
+" remove through end or greater
+" return AtomList of removed
+function! AtomList.remove(end) dict
+	let list = []
+	for i in range(len(self.atoms))
+		let atom = self.atoms[i]
+		let list += deepcopy(atom)
+		if DivVal[a:end] >= DivVal[atom.div] 
+			call remove(self.atoms,0,i)
+			return deepcopy(list)
+		endif
+	endfor
+endfunction
+
+" returns list of all strings - all source, then trans, then comments
+function! AtomList.sort() dict
+	let dict = { "source":[], "trans":[], "comments":[] }
+	for atom in self.atoms
+		let dict.source += join(atom.source)
+		let dict.trans += join(atom.trans)
+		let dict.comments += atom.comments
+	endfor
+	return dict
 endfunction
 
 """""""""""""""""""""""
@@ -256,38 +267,49 @@ function! Translate.rawSplit() dict
 	return deepcopy(list)
 endfunction
 
-" sep_div: div that trans and src are seperated at
-" eg phrase: prints entire source of phrase, then entire trans (then comments)
-" nl_div[=newline_div]: what is the smallest div between which there is a new
-" line to seperate
-" eg phrase: between every phrase *and* every par but *not* every atom there
-" is a new line
-function! Translate.styleSplit(sep_div, nl_div)
-	let DivNum = { "atom":1, "phrase":2, "par":3, "mine":4 }
+function TrimList(list)
+	let list = deepcopy(a:list)
+	let i = -1
+	while 1
+		if list[i] == ""
+			call remove(list, i)
+			let i -= 1
+		else
+			return deepcopy(list)
+		endif
+	endwhile
+endfunction
+
+" sep_div: {<div>:[<[""] for every new line you want]}: what div(and
+" also done at greater then) to seperate source from trans
+"
+" nl_divs[=newline_divs]: sep_div-style dictionary, with keys for each div
+" where should add NL within source and trans, with value of [[]..] for each
+" new line wanted
+function! Translate.styleSplit(sep_div, nl_sourcedivs, nl_transdivs)
 	let gather = self.gather()
 	let list = []
 
-	let Sep = { "source":[], "trans":[], "comment":[] }
-	let sep = deepcopy(Sep)
-	for atom in gather
-		let sub += atom
-		if DivNum[atom.div] >= DivNum[a:sep_div]
-			let sub = Number(sub)
-			for i in sub
-				let sep.source += [atom.source]
-				let sep.trans += [join(atom.trans)]
-				let sep.comment += atom.comment
-				if DivNum[atom.div] >= DivNum[a:nl_div]
-					let sep.source += [""]
-					let sep.trans += [""]
-				endif
-			endfor
-			let list += sep.source + sep.trans + sep.comment
-			let list += [""]
-			let sep = deepcopy(Sep)
-		endif
-	endfor
+	while !empty(gather)
+		let sub_gather = gather.remove(keys(a:sep_div)[0])
+		call sub_gather.footnote()
 
-	" the last 2 are extra spaces
-	return list[0:-3]
+		for atom in sub_gather
+			" if atom ends div in source that a new line is wanted
+			" after
+			if has_key(a:nl_sourcedivs, atom.div)
+				let atom.source += nl_sourcedivs[atom.div]
+			elseif has_key(a:nl_transdivs, atom.div)
+				let atom.trans += nl_transdivs[atom.div]
+			endif
+		endfor
+
+		let sorted = sub_gather.sort()
+		call map(sorted, "TrimList(v:val)")
+		let list += sorted.source + sorted.trans + sorted.comments 
+		let list += values(a:sep_div)[0] 
+	endwhile
+	let list = TrimList(list)
+
+	return list
 endfunction
