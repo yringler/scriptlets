@@ -74,9 +74,7 @@ function! AtomList.styleSplit(split_source, split_trans) dict
 			let dict.trans += a:split_trans[atom.ends]
 		endif
 	endfor
-	for key in ["source","trans"]
-		let dict[key] = TrimList(dict[key])
-	endfor
+	call map(dict, "TrimList(v:val)")
 	return deepcopy(dict.source + dict.trans + dict.comment)
 endfunction
 
@@ -330,7 +328,7 @@ function! Translate.styleSplit(split_sep, split_source, split_trans) dict
 		let sub_gather = gather.remove(keys(a:split_sep)[0])
 		call sub_gather.footnote()
 		let list += sub_gather.styleSplit(a:split_source,a:split_trans)
-		let list += values(a:split_sep)
+		let list += values(a:split_sep)[0]
 	endwhile
 
 	let list = TrimList(list)
