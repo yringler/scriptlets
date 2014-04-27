@@ -211,7 +211,7 @@ function! Atom.read() dict
 endfunction
 
 function! Atom.gather() dict
-	atomList = deepcopy(AtomList)
+	atomList = deepcopy(g:AtomList)
 	atomList.atoms = [ deepcopy(self) ]
 	return deepcopy(atomList)
 endfunction
@@ -223,7 +223,7 @@ endfunction
 
 " arg: num source to add
 function! Translate.add(num) dict
-	let atom = deepcopy(Atom)
+	let atom = deepcopy(g:Atom)
 	let atom.source = join(self.source[self.upto : self.upto+a:num-1])
 	let self.pars[-1].phrases[-1].atoms += deepcopy(atom)
 	let self.upto += a:num
