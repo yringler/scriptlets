@@ -54,11 +54,14 @@ function! JoinString(a,b)
 	endif
 endfunction
 
-" split: {<div>:["",..] what div(and also done at greater then) to seperate
-" source from trans
+" split: {<div>:["",..] what div to seperate source from trans
+" [""] just moves to next line, because loop appends to last item. to have
+" blank line between, use ["",""]
 "
-" returns dict of all data seperate - all source, then trans, then comments
-function! AtomList.sort(split_source, split_trans) dict
+" returns list of all source in one string [new line split according to arg]
+" followed by all trans, in one string as with source, followed by all the
+" comments
+function! AtomList.styleSplit(split_source, split_trans) dict
 	let dict = { "source":[""], "trans":[""], "comment":[] }
 	for atom in self.atoms
 		let dict.source[-1] = JoinString(dict.source[-1],atom.source)
@@ -74,7 +77,7 @@ function! AtomList.sort(split_source, split_trans) dict
 	for key in ["source","trans"]
 		let dict[key] = TrimList(dict[key])
 	endfor
-	return deepcopy(dict)
+	return deepcopy(dict.source + dict.trans + dict.comment)
 endfunction
 
 """"""""""""""""""""""
@@ -317,9 +320,8 @@ endfunction
 " split_sep: {<div>:["",..] what div(and also done at greater then) to
 " seperate source from trans
 "
-" nl_divs[=newline_divs]: split_sep-style dictionary, with keys for each div
-" where should add NL within source and trans, with value of [[]..] for each
-" new line wanted
+" other splits: same dictionary, with keys for each div where should add NL
+" within source and trans
 function! Translate.styleSplit(split_sep, split_source, split_trans) dict
 	let gather = self.gather()
 	let list = []
@@ -327,8 +329,7 @@ function! Translate.styleSplit(split_sep, split_source, split_trans) dict
 	while !empty(gather)
 		let sub_gather = gather.remove(keys(a:split_sep)[0])
 		call sub_gather.footnote()
-		let sorted = sub_gather.sort(a:split_source,a:split_trans)
-		let list += sorted.source + sorted.trans + sorted.comment
+		let list += sub_gather.styleSplit(a:split_source,a:split_trans)
 		let list += values(a:split_sep)
 	endwhile
 
