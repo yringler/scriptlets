@@ -8,15 +8,10 @@ let AtomList = { "atoms":[] }
 
 function! TrimList(list)
 	let list = deepcopy(a:list)
-	let i = -1
-	while 1
-		if list[i] == ""
-			call remove(list, i)
-			let i -= 1
-		else
-			return deepcopy(list)
-		endif
-	endwhile
+	while list[-1] ==""
+			call remove(list, - 1)
+	endwhile 
+	return deepcopy(list)
 endfunction
 
 function! AtomList.footnote() dict
