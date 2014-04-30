@@ -9,7 +9,7 @@ let AtomList = { "atoms":[] }
 function! TrimList(list)
 	let list = deepcopy(a:list)
 	while list[-1] ==""
-			call remove(list, - 1)
+		call remove(list, - 1)
 	endwhile 
 	return deepcopy(list)
 endfunction
