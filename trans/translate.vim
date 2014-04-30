@@ -20,8 +20,8 @@ function! AtomList.footnote() dict
 	for atom in self.atoms
 		" trans can have 1 even if comment is empty
 		for i in range(len(atom.comment))
-			let atom.trans[i] .= "{".foot_num+1."}"
-			let atom.comment[i] = foot_num+1.") ".atom.comment[i]
+			let atom.trans[i] .= "{".foot_num."}"
+			let atom.comment[i] = foot_num.") ".atom.comment[i]
 			let foot_num ++
 		endfor
 	endfor
