@@ -31,12 +31,16 @@ endfunction
 " AtomList which is removed
 function! AtomList.remove(end) dict
 	let list = deepcopy(AtomList)
-	for i in range(len(self.atoms))
+	let i = 0
+	while i != len(self.atoms)
 		let atom = self.atoms[i]
 		let list.atoms += [deepcopy(atom)]
 		if DivVal[atom.ends] >= DivVal[a:end]
 			call remove(self.atoms,0,i)
+			let i = 0
 			return deepcopy(list)
+		else
+			let i += 1
 		endif
 	endfor
 endfunction
