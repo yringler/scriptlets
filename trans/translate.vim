@@ -283,9 +283,9 @@ function! Translate.setDiv(div) dict
 	endif
 
 	if a:div =~ 'par'
-		call add(self.pars, deepcopy(Pars))
+		call add(self.pars, deepcopy(g:Par))
 	elseif a:div =~ "phrase"
-		call add(self.pars[-1].phrases, deepcopy(Phrase))
+		call add(self.pars[-1].phrases, deepcopy(g:Phrase))
 	endif
 
 	if a:div =~ 'start'
