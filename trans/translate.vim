@@ -154,7 +154,7 @@ let Translate.parentRawSplit = Div.rawSplit
 " flag: if end of input is end of mine [= text under translate control]
 let Translate.startmine = 1
 " yes|no|ask
-let Translate.endmine = ""
+let Translate.endmine = "yes"
 
 
 """""""""""""""""""""
@@ -225,6 +225,18 @@ function! Translate.add(num) dict
 	let atom.source = join(self.source[self.upto : self.upto+a:num-1])
 	let self.pars[-1].phrases[-1].atoms += deepcopy(atom)
 	let self.upto += a:num
+	
+	if self.upto > len(self.source)
+		let self.upto = len(self.source) - 1
+		echo "caution: upto was more then len(source), set to valid"
+		echo "sleeping for 5 seconds"
+		sleep 5
+	endif
+endfunction
+
+function! Translate.appendTrans(trans) dict
+	let trans = JoinString(self.par[-1].phrases[-1].atoms[-1].trans,a:trans)
+	let self.pars[-1].phrases[-1].atoms[-1].trans = trans
 endfunction
 
 " support function for genPrompt. echo <hebrew> is left-to-right...which is
@@ -326,7 +338,7 @@ function! Translate.rawSplit() dict
 		self.askEnd()
 	endif
 
-	if self.endmine == "no"
+	if self.endmine == "no" || self.upto == len(self.source)
 		call remove(list, -1)
 	endif
 
@@ -355,4 +367,50 @@ function! Translate.styleSplit(split_sep, split_source, split_trans) dict
 endfunction
 
 function TranslateLine()
+	let lineTrans = deepcopy(Translate)
+	let lineTrans.source = split(getline("."))
 
+	while 1
+		if lineTrans.upto == len(lineTrans.source)
+			break
+		endif
+		let input = split(input(lineTrans.genPrompt()))
+		if len(input) == 0 
+			break
+		endif
+
+		for i in range(len(input))
+			let word = input[i]
+
+			if word !~ '\D'
+				call lineTrans.add(word)
+				continue
+			endif
+
+			if word == '/' || word == '//'
+				let div = word == '/' ? "phrase" : "par"
+
+				if input[i-1] !~ '\D'
+					call lineTrans.setDiv("start" . div)
+				elseif i+1 == len(input) || input[i+1] !~ '\D'
+					call lineTrans.setDiv("end" . div)
+				else
+					echo ERROR
+					finish
+				endif
+			endif
+
+			if word =~ '\\\d' || word =~ '\/'
+			       let word = substitute(word, '\\', '', '')
+			endif
+
+			call lineTrans.appendTrans(word)
+		endfor
+	endwhile
+
+	if lineTrans.upto > 0
+		let output = lineTrans.rawSplit()
+		call setline(line("."), output[0])
+		call append(line("."), output[1:])
+	endif
+endfunction
