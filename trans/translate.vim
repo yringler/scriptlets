@@ -196,8 +196,6 @@ endfunction
 " load Atom data from file. start at startatom
 function! Atom.read() dict
 	call Require("atom")
-	" startatom -> startsource
-	normal j
 	call self.readKey("source")
 	call self.readKey("trans")
 	call self.readKey("comment")
