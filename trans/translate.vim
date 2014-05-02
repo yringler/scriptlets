@@ -30,10 +30,10 @@ endfunction
 " remove through end (a div) or greater (meaning more general). Return
 " AtomList which is removed
 function! AtomList.remove(end) dict
-	let list = []
+	let list = deepcopy(AtomList)
 	for i in range(len(self.atoms))
 		let atom = self.atoms[i]
-		let list += deepcopy(atom)
+		let list.atoms += [deepcopy(atom)]
 		if DivVal[atom.ends] >= DivVal[a:end]
 			call remove(self.atoms,0,i)
 			return deepcopy(list)
