@@ -227,16 +227,34 @@ function! Translate.add(num) dict
 	let self.upto += a:num
 endfunction
 
+" support function for genPrompt. echo <hebrew> is left-to-right...which is
+" probably the best option. But it would be nice if a reverse string function
+" was supplied
+
+function! FlipString(str)
+	let char_list = split(a:str, '\zs')
+	call reverse(char_list)
+
+	let tmp = ''
+	for i in char_list
+		let tmp .= i
+	endfor
+
+	return tmp
+endfunction
+
 function! Translate.genPrompt() dict
 	let list = []
 	for [start,end] in [[-10,-1], [0,9], [10,19]]
 		let start += self.upto
 		let end += self.upto
 		if start > 0 && end < len(self.source)
-			let list += self.source[start:end]
+			let string = FlipString(join(self.souce[start:and]))
+			let list += [string]
 		endif
 	endfor
-	let list += [""] + [join(self.source[self.upto:self.upto + 9]) . ": "]
+	let string = FlipString(join(self.source[self.upto:self.upto+9]))
+	let list += [""] + [string . ": "]
 	return list[0] == "" ? list[1] : join(list,"\n")
 endfunction
 
@@ -335,3 +353,6 @@ function! Translate.styleSplit(split_sep, split_source, split_trans) dict
 
 	return deepcopy(list)
 endfunction
+
+function TranslateLine()
+
