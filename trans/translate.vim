@@ -235,7 +235,7 @@ function! Translate.add(num) dict
 endfunction
 
 function! Translate.appendTrans(trans) dict
-	let trans = JoinString(self.par[-1].phrases[-1].atoms[-1].trans,a:trans)
+	let trans = JoinString(self.pars[-1].phrases[-1].atoms[-1].trans,a:trans)
 	let self.pars[-1].phrases[-1].atoms[-1].trans = trans
 endfunction
 
