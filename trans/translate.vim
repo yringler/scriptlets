@@ -53,13 +53,16 @@ function! JoinString(a,b)
 	endif
 endfunction
 
-" split: {<div>:["",..] what div to seperate source from trans
-" [""] just moves to next line, because loop appends to last item. to have
-" blank line between, use ["",""]
-"
 " returns list of all source in one string [new line split according to arg]
 " followed by all trans, in one string as with source, followed by all the
-" comments
+" comments, each comment its own item in list
+"
+" args: dicts of type { "<div>":["",...], ... }
+" 	key is div that value is appended to
+" 	split_source is for source, trans for trans
+"
+" [""] just moves to next line, because loop appends to last item. to have
+" blank line between, use ["",""] for val for key "<div>"
 function! AtomList.styleSplit(split_source, split_trans) dict
 	let dict = { "source":[""], "trans":[""], "comment":[] }
 	for atom in self.atoms
