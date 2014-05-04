@@ -223,7 +223,7 @@ endfunction
 function! Translate.add(num) dict
 	let atom = deepcopy(g:Atom)
 	let atom.source = join(self.source[self.upto : self.upto+a:num-1])
-	let self.pars[-1].phrases[-1].atoms += deepcopy(atom)
+	let self.pars[-1].phrases[-1].atoms += [deepcopy(atom)]
 	let self.upto += a:num
 	
 	if self.upto > len(self.source)
@@ -366,8 +366,8 @@ function! Translate.styleSplit(split_sep, split_source, split_trans) dict
 	return deepcopy(list)
 endfunction
 
-function TranslateLine()
-	let lineTrans = deepcopy(Translate)
+function! TranslateLine()
+	let lineTrans = deepcopy(g:Translate)
 	let lineTrans.source = split(getline("."))
 
 	while 1
