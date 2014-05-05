@@ -209,6 +209,7 @@ function! Atom.read() dict
 endfunction
 
 function! Atom.gather() dict
+	call self.parseSrc()
 	atomList = deepcopy(g:AtomList)
 	atomList.atoms = [ deepcopy(self) ]
 	return deepcopy(atomList)
