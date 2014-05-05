@@ -149,7 +149,7 @@ call extend(Translate, { "div":"mine", "subClass":Par, "subKey": "pars" })
 call extend(Translate, { "pars":[deepcopy(Par)] })
 
 " source: space seperated source
-call extend(Translate, { "source":[], "upto":0 })
+call extend(Translate, { "source":[], "upto":0, "nextStart":"" })
 let Translate.parentRawSplit = Div.rawSplit
 " flag: if end of input is end of mine [= text under translate control]
 let Translate.startmine = 1
@@ -226,7 +226,8 @@ function! Translate.add(num) dict
 
 	if self.upto + a:num -1 > len(self.source) - 1
 		" eg highest index is 5, upto 4: 5-4=1
-		let num = len(self.source) - 1 - self.upto
+		" +1 because using 4&5 =2
+		let num = len(self.source) - 1 - self.upto + 1
 	endif
 	if num == 0 
 		echo "ERROR:add:0"
@@ -237,6 +238,11 @@ function! Translate.add(num) dict
 	let atom.source = join(self.source[self.upto : self.upto+num-1])
 	let self.pars[-1].phrases[-1].atoms += [deepcopy(atom)]
 	let self.upto += num
+
+	if self.nextStart != ""
+		call self.setDiv("start" . self.nextStart)
+		let self.nextStart = ""
+	endif
 endfunction
 
 function! Translate.appendTrans(trans) dict
@@ -280,11 +286,10 @@ function! Translate.setDiv(div) dict
 		throw "ERROR:div:bad arg:" . a:div
 	endif
 
-	let atom = deepcopy(self.pars[-1].phrases[-1].atoms[-1])
-	call remove(self.pars[-1].phrases[-1].atoms, -1)
 	
 	if a:div =~ 'end'
-		call add(self.pars[-1].phrases[-1].atoms, deepcopy(atom))
+		let self.nextStart = matchstr(a:div,'par\|phrase')
+		return
 	endif
 
 	if a:div =~ 'par'
@@ -294,6 +299,8 @@ function! Translate.setDiv(div) dict
 	endif
 
 	if a:div =~ 'start'
+		let atom = deepcopy(self.pars[-1].phrases[-1].atoms[-1])
+		call remove(self.pars[-1].phrases[-1].atoms, -1)
 		call add(self.pars[-1].phrases[-1].atoms, deepcopy(atom))
 	endif
 endfunction
@@ -343,7 +350,7 @@ function! Translate.rawSplit() dict
 		self.askEnd()
 	endif
 
-	if self.endmine == "no" || self.upto == len(self.source)
+	if self.endmine == "no" || self.upto > len(self.source)
 		call remove(list, -1)
 	endif
 
