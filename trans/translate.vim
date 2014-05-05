@@ -221,17 +221,17 @@ endfunction
 
 " arg: num source to add
 function! Translate.add(num) dict
+	if self.upto + a:num -1 >= len(self.source) - 1
+		let num = len(self.source) - 1 - self.upto
+	endif
+	if num == 0 
+		echo "ERROR:add:0"
+		return
+	endif
 	let atom = deepcopy(g:Atom)
 	let atom.source = join(self.source[self.upto : self.upto+a:num-1])
 	let self.pars[-1].phrases[-1].atoms += [deepcopy(atom)]
 	let self.upto += a:num
-	
-	if self.upto > len(self.source)
-		let self.upto = len(self.source) - 1
-		echo "caution: upto was more then len(source), set to valid"
-		echo "sleeping for 5 seconds"
-		sleep 5
-	endif
 endfunction
 
 function! Translate.appendTrans(trans) dict
