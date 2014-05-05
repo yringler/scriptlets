@@ -222,17 +222,21 @@ endfunction
 
 " arg: num source to add
 function! Translate.add(num) dict
-	if self.upto + a:num -1 >= len(self.source) - 1
+	let num = a:num
+
+	if self.upto + a:num -1 > len(self.source) - 1
+		" eg highest index is 5, upto 4: 5-4=1
 		let num = len(self.source) - 1 - self.upto
 	endif
 	if num == 0 
 		echo "ERROR:add:0"
 		return
 	endif
+
 	let atom = deepcopy(g:Atom)
-	let atom.source = join(self.source[self.upto : self.upto+a:num-1])
+	let atom.source = join(self.source[self.upto : self.upto+num-1])
 	let self.pars[-1].phrases[-1].atoms += [deepcopy(atom)]
-	let self.upto += a:num
+	let self.upto += num
 endfunction
 
 function! Translate.appendTrans(trans) dict
