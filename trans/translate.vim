@@ -3,7 +3,7 @@
 " which is an entire thing. Bigger number for more general
 let DivVal = { "atom":1, "phrase":2, "par":3, "mine":4 }
 " source is a list to enable adding a new line
-let Atom = { "source": "", "trans":[], "comment":[], "ends":"atom" }
+let Atom = { "source": "", "trans":[""], "comment":[], "ends":"atom" }
 let AtomList = { "atoms":[] }
 
 function! TrimList(list)
@@ -137,15 +137,15 @@ endfunction
 " phrases: list of atoms
 " atoms left empty so add is to start
 let Phrase = deepcopy(Div)
-call extend(Phrase, { "div":"phrase", "subClass":Atom, "subkey":"atoms"})
+call extend(Phrase, { "div":"phrase", "subClass":Atom, "subKey":"atoms"})
 call extend(Phrase, { "atoms":[] })
 
 let Par = deepcopy(Div)
-call extend(Par, { "div":"par", "subClass":Phrase, "subkey":"phrases"})
+call extend(Par, { "div":"par", "subClass":Phrase, "subKey":"phrases"})
 call extend(Par, { "phrases":[deepcopy(Phrase)] })
 
 let Translate = deepcopy(Div)
-call extend(Translate, { "div":"mine", "subClass":Par, "subkey":"pars"})
+call extend(Translate, { "div":"mine", "subClass":Par, "subKey": "pars" })
 call extend(Translate, { "pars":[deepcopy(Par)] })
 
 " source: space seperated source
@@ -180,9 +180,9 @@ endfunction
 
 function! Atom.rawSplit() dict
 	" source is one line only
-	let list = ["startatom", "startsource"] + self.source + ["endsource"]
+	let list = ["startatom", "startsource"] + [self.source] + ["endsource"]
 	let list += ["starttrans"] + self.trans + ["endtrans"]
-	if len(self.comment) > 0)
+	if len(self.comment) > 0
 		let list += ["startcomment"] + self.comment + ["endcomment"]
 	endif
 	return deepcopy(list + ["endatom"])
@@ -235,8 +235,8 @@ function! Translate.add(num) dict
 endfunction
 
 function! Translate.appendTrans(trans) dict
-	let trans = JoinString(self.pars[-1].phrases[-1].atoms[-1].trans,a:trans)
-	let self.pars[-1].phrases[-1].atoms[-1].trans = trans
+	let trans = JoinString(self.pars[-1].phrases[-1].atoms[-1].trans[-1],a:trans)
+	let self.pars[-1].phrases[-1].atoms[-1].trans[-1] = trans
 endfunction
 
 " support function for genPrompt. echo <hebrew> is left-to-right...which is
@@ -294,7 +294,7 @@ function! Translate.setDiv(div) dict
 endfunction
 
 function! Translate.endInput() dict
-	call self.div("endpar")
+	call self.setDiv("endpar")
 endfunction
 
 function! Translate.endMine(arg) dict
@@ -398,6 +398,8 @@ function! TranslateLine()
 					echo ERROR
 					finish
 				endif
+
+				continue	" / or // not a word
 			endif
 
 			if word =~ '\\\d' || word =~ '\/'
