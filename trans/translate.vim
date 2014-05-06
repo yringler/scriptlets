@@ -101,6 +101,8 @@ function! Require(div) dict
 endfunction
 
 function! Div.read() dict
+	" clear list to allow appending - default contains one item
+	let self[self.subKey] = []
 	call Require(self.div)
 	while getline(".") != "end" . self.div
 		let sub = deepcopy(self.subClass)
@@ -204,7 +206,10 @@ endfunction
 " load Atom data from file. start at startatom
 function! Atom.read() dict
 	call Require("atom")
-	call self.readKey("source")
+	call Require("source")
+	let self.source = getline(".")
+	" <source> -> endsource -> starttrans
+	normal jj
 	call self.readKey("trans")
 	call self.readKey("comment")
 endfunction
