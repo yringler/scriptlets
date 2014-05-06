@@ -290,17 +290,17 @@ function! Translate.setDiv(div) dict
 	if a:div =~ 'end'
 		let self.nextStart = matchstr(a:div,'par\|phrase')
 		return
-	endif
-
-	if a:div =~ 'par'
-		call add(self.pars, deepcopy(g:Par))
-	elseif a:div =~ "phrase"
-		call add(self.pars[-1].phrases, deepcopy(g:Phrase))
-	endif
-
-	if a:div =~ 'start'
+	elseif a:div =~ 'start'
+		" chang div of last atom by moving it to new par|phrase
 		let atom = deepcopy(self.pars[-1].phrases[-1].atoms[-1])
 		call remove(self.pars[-1].phrases[-1].atoms, -1)
+
+		if a:div =~ 'par'
+			call add(self.pars, deepcopy(g:Par))
+		elseif a:div =~ "phrase"
+			call add(self.pars[-1].phrases, deepcopy(g:Phrase))
+		endif
+
 		call add(self.pars[-1].phrases[-1].atoms, deepcopy(atom))
 	endif
 endfunction
