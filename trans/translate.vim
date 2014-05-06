@@ -306,9 +306,9 @@ function! Translate.setDiv(div) dict
 	endif
 endfunction
 
-function! Translate.endInput() dict
-	call self.setDiv("endpar")
-endfunction
+"function! Translate.endInput() dict
+"	call self.setDiv("endpar")
+"endfunction
 
 function! Translate.endMine(arg) dict
 	self.endmine = a:arg
@@ -337,9 +337,9 @@ function! Translate.checkCont() dict
 	endif
 endfunction
 
-" also calls endInput()
+"" also calls endInput()
 function! Translate.rawSplit() dict
-	call self.endInput()
+	"call self.endInput()
 	let list = self.parentRawSplit()
 
 	if self.startmine == 0
