@@ -179,6 +179,7 @@ function! Atom.parseSrc() dict
 endfunction
 
 function! Atom.rawSplit() dict
+	call self.parseSrc()
 	" source is one line only
 	let list = ["startatom", "startsource"] + [self.source] + ["endsource"]
 	let list += ["starttrans"] + self.trans + ["endtrans"]
