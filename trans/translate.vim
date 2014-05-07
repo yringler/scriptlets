@@ -176,7 +176,9 @@ function! Atom.parseSrc() dict
 		let old_string = Trim(matchstr(self.trans[-1], '^[^{]*'))
 
 		let self.trans[-1] = old_string
-		call add(self.trans, new_string)
+		if new_string != ""
+			call add(self.trans, new_string)
+		endif
 	endwhile
 endfunction
 
