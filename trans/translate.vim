@@ -97,9 +97,9 @@ endfunction
 let Div = { "div" : "", "subClass" : {}, "subKey" : "" }
 
 " expects cursor to be on start*, then moves to next line, into the thing
-function! Require(div) dict
+function! Require(div)
 	if getline(".") != "start".a:div || search("end".a:div, "n") == -1
-		throw "error:Require:" . a:start
+		throw "error:Require:" . a:div . ":on:" . getline(".")
 	else
 		normal j
 	endif
@@ -223,7 +223,11 @@ function! Atom.read() dict
 	" <source> -> endsource -> starttrans
 	normal jj
 	call self.readKey("trans")
-	call self.readKey("comment")
+	if getline(".") =~ 'comment'
+		call self.readKey("comment")
+	endif
+	" end(trans|comment) -> (start|end)!(atom)
+	normal j
 endfunction
 
 function! Atom.gather() dict
@@ -394,7 +398,7 @@ function! Translate.styleSplit(split_sep, split_source, split_trans) dict
 	return deepcopy(TrimList(list))
 endfunction
 
-function ReplaceAppend(list)
+function! ReplaceAppend(list)
 	if len(a:list) > 0
 		call setline(line("."), a:list[0])
 	endif
