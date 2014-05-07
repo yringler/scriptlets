@@ -206,7 +206,7 @@ endfunction
 " start at start(.*)
 " ends off line past end\1
 " div is same as key
-function! Atom.readKey(div) 
+function! Atom.readKey(div) dict
 	call Require(a:div)
 	while getline(".") != "end" . a:div
 		let self[a:div] += [getline(".")]
@@ -228,8 +228,8 @@ endfunction
 
 function! Atom.gather() dict
 	call self.parseSrc()
-	atomList = deepcopy(g:AtomList)
-	atomList.atoms = [ deepcopy(self) ]
+	let atomList = deepcopy(g:AtomList)
+	let atomList.atoms = [ deepcopy(self) ]
 	return deepcopy(atomList)
 endfunction
 
