@@ -7,9 +7,18 @@ let Atom = { "source": "", "trans":[""], "comment":[], "ends":"atom" }
 let AtomList = { "atoms":[] }
 
 function! TrimList(list)
+	if len(list) == 0
+		echo "warning:TrimList:empty"
+		return
+	endif
+
 	let list = deepcopy(a:list)
-	while list[-1] ==""
-		call remove(list, - 1)
+	while list[-1] == ""
+		if len(list) > 0
+			call remove(list, - 1)
+		else
+			break
+		endif
 	endwhile 
 	return deepcopy(list)
 endfunction
@@ -30,17 +39,13 @@ endfunction
 " remove through end (a div) or greater (meaning more general). Return
 " AtomList which is removed
 function! AtomList.remove(end) dict
-	let list = deepcopy(AtomList)
-	let i = 0
-	while i != len(self.atoms)
+	let list = deepcopy(g:AtomList)
+	for i in range(len(self.atoms))
 		let atom = self.atoms[i]
 		let list.atoms += [deepcopy(atom)]
-		if DivVal[atom.ends] >= DivVal[a:end]
+		if g:DivVal[atom.ends] >= g:DivVal[a:end]
 			call remove(self.atoms,0,i)
-			let i = 0
 			return deepcopy(list)
-		else
-			let i += 1
 		endif
 	endfor
 endfunction
@@ -124,12 +129,17 @@ endfunction
 
 " gather all Atoms into one list
 function! Div.gather() dict
-	let list = deepcopy(AtomList)
+	let list = deepcopy(g:AtomList)
 	for i in self[self.subKey]
 		let list.atoms += i.gather()
 	endfor
-	let list.atoms[-1].ends = self.div
-	return deepcopy(list)
+	
+	if len(list.atoms) == 0
+		echo "warning:gather:empty"
+	else
+		let list.atoms[-1].ends = self.div
+	endif
+		return deepcopy(list)
 endfunction
 
 """""""""""""""""""""
@@ -147,7 +157,7 @@ call extend(Par, { "div":"par", "subClass":Phrase, "subKey":"phrases"})
 call extend(Par, { "phrases":[deepcopy(Phrase)] })
 
 let Translate = deepcopy(Div)
-call extend(Translate, { "div":"mine", "subClass":Par, "subKey": "pars" })
+call extend(Translate, { "div":"mine", "subClass":Par, "subKey":"pars" })
 call extend(Translate, { "pars":[deepcopy(Par)] })
 
 " source: space seperated source
@@ -381,9 +391,7 @@ function! Translate.styleSplit(split_sep, split_source, split_trans) dict
 		let list += values(a:split_sep)[0]
 	endwhile
 
-	let list = TrimList(list)
-
-	return deepcopy(list)
+	return deepcopy(TrimList(list))
 endfunction
 
 function ReplaceAppend(list)
