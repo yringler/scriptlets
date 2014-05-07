@@ -386,6 +386,15 @@ function! Translate.styleSplit(split_sep, split_source, split_trans) dict
 	return deepcopy(list)
 endfunction
 
+function ReplaceAppend(list)
+	if len(a:list) > 0
+		call setline(line("."), a:list[0])
+	endif
+	if len(a:list) > 1
+		call append(line("."), a:list[1:])
+	endif
+endfunction
+
 function! TranslateLine()
 	let lineTrans = deepcopy(g:Translate)
 	let lineTrans.source = split(getline("."))
@@ -431,8 +440,6 @@ function! TranslateLine()
 	endwhile
 
 	if lineTrans.upto > 0
-		let output = lineTrans.rawSplit()
-		call setline(line("."), output[0])
-		call append(line("."), output[1:])
+		call ReplaceAppend(lineTrans.rawSplit())
 	endif
 endfunction
