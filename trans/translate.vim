@@ -14,11 +14,11 @@ function! TrimList(list)
 
 	let list = deepcopy(a:list)
 	while list[-1] == ""
-		if len(list) > 0
-			call remove(list, - 1)
-		else
-			break
-		endif
+		"if len(list) > 0
+		call remove(list, -1)
+		"else
+		"	break
+		"endif
 	endwhile 
 	return deepcopy(list)
 endfunction
@@ -29,9 +29,9 @@ function! AtomList.footnote() dict
 	for atom in self.atoms
 		" trans can have 1 even if comment is empty
 		for i in range(len(atom.comment))
-			let atom.trans[i] .= "{".foot_num."}"
-			let atom.comment[i] = foot_num.") ".atom.comment[i]
-			let foot_num ++
+			let atom.trans[i] .= '('.foot_num.')'
+			let atom.comment[i] = foot_num.') '.atom.comment[i]
+			let foot_num += 1
 		endfor
 	endfor
 endfunction
@@ -51,10 +51,12 @@ function! AtomList.remove(end) dict
 endfunction
 
 function! JoinString(a,b)
-	if a:a != ""
-		return a:a . ' ' . a:b
-	else
+	if a:a = ""
 		return a:b
+	elseif a:b == ""
+		return a:a
+	else
+		return a:a . ' ' . a:b
 	endif
 endfunction
 
@@ -139,7 +141,8 @@ function! Div.gather() dict
 	else
 		let list.atoms[-1].ends = self.div
 	endif
-		return deepcopy(list)
+
+	return deepcopy(list)
 endfunction
 
 """""""""""""""""""""
