@@ -107,6 +107,7 @@ function! Require(div)
 	endif
 endfunction
 
+" start at start<div>, ends at line after end<div>
 function! Div.read() dict
 	" clear list to allow appending - default contains one item
 	let self[self.subKey] = []
