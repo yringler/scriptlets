@@ -7,7 +7,11 @@ function! Format()
 	endif
 	
 	call translate.read()
+	normal gg dG
+	let list = translate.rawSplit()
+	call ReplaceAppend(list)
 	echo "yay!"
-	sleep 2
-	call ReplaceAppend(translate.styleSplit({"atom":[""]}, {}))
+
+	let list = translate.styleSplit({"atom":[""]}, {}, {})) 
+	call ReplaceAppend(list)
 endfunction

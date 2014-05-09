@@ -7,18 +7,14 @@ let Atom = { "source": "", "trans":[""], "comment":[], "ends":"atom" }
 let AtomList = { "atoms":[] }
 
 function! TrimList(list)
-	if len(list) == 0
+	if len(a:list) == 0
 		echo "warning:TrimList:empty"
 		return
 	endif
 
 	let list = deepcopy(a:list)
 	while list[-1] == ""
-		"if len(list) > 0
 		call remove(list, -1)
-		"else
-		"	break
-		"endif
 	endwhile 
 	return deepcopy(list)
 endfunction
@@ -51,7 +47,7 @@ function! AtomList.remove(end) dict
 endfunction
 
 function! JoinString(a,b)
-	if a:a = ""
+	if a:a == ""
 		return a:b
 	elseif a:b == ""
 		return a:a
@@ -83,8 +79,10 @@ function! AtomList.styleSplit(split_source, split_trans) dict
 			let dict.trans += a:split_trans[atom.ends]
 		endif
 	endfor
-	call map(dict, "TrimList(v:val)")
-	return deepcopy(dict.source + dict.trans + dict.comment)
+	"call map(dict, "TrimList(v:val)")
+	let list = dict.source + dict.trans + dict.comment
+	return deepcopy(list)
+	"return deepcopy(dict.source + dict.trans + dict.comment)
 endfunction
 
 """"""""""""""""""""""
@@ -134,7 +132,7 @@ endfunction
 function! Div.gather() dict
 	let list = deepcopy(g:AtomList)
 	for i in self[self.subKey]
-		let list.atoms += i.gather()
+		let list.atoms += i.gather().atoms
 	endfor
 	
 	if len(list.atoms) == 0
@@ -212,10 +210,12 @@ endfunction
 " div is same as key
 function! Atom.readKey(div) dict
 	call Require(a:div)
+	let list = []
 	while getline(".") != "end" . a:div
-		let self[a:div] += [getline(".")]
+		let list += [getline(".")]
 		normal j
 	endwhile
+	let self[a:div] = deepcopy(list)
 	normal j
 endfunction
 
