@@ -1,10 +1,103 @@
 " divs, or divisions, are very important. It means divions whithin the text,
-" there are an atom, the smallest, usually around a word or two, until mine,
-" which is an entire thing. Bigger number for more general
-let DivVal = { "atom":1, "phrase":2, "par":3, "mine":4 }
+" there are an atom, the smallest, usually around a word or two, until
+" atomlist, which is an entire thing. Bigger number for more general
+let DivVal = { "atom":1, "phrase":2, "par":3, "atomlist":4 }
 " source is a list to enable adding a new line
 let Atom = { "source": "", "trans":[""], "comment":[], "ends":"atom" }
+
+
+"""""""""""""""""""""
+" atom functions    "
+"""""""""""""""""""""
+
+function! Trim(string)
+	return matchstr(a:string, '^[[:space:]]*\zs.*\ze[[:space:]]*$')
+endfunction
+
+function! Atom.parseSrc() dict
+	while self.trans[-1] =~ '{.*}'
+		let comment = Trim(matchstr(self.trans[-1], '{\zs[^}]*'))
+		call add(self.comment, comment)
+
+		let new_string = Trim(matchstr(self.trans[-1], '}\zs.*'))
+		let old_string = Trim(matchstr(self.trans[-1], '^[^{]*'))
+
+		let self.trans[-1] = old_string
+		if new_string != ""
+			call add(self.trans, new_string)
+		endif
+	endwhile
+endfunction
+
+function! Atom.rawSplit() dict
+	call self.parseSrc()
+	" source is one line only
+	let list = ["startatom", "startsource"] + [self.source] + ["endsource"]
+	if len(self.trans) > 0
+		let list += ["starttrans"] + self.trans + ["endtrans"]
+	endif
+	if len(self.comment) > 0
+		let list += ["startcomment"] + self.comment + ["endcomment"]
+	endif
+	return deepcopy(list + ["startends", self.ends, "endends" , "endatom"])
+endfunction
+
+" start at start(.*)
+" ends off line past end\1
+" div is same as key
+function! Atom.readKey(div) dict
+	call Require(a:div)
+	let list = []
+	while getline(".") != "end" . a:div
+		let list += [getline(".")]
+		normal j
+	endwhile
+	let self[a:div] = deepcopy(list)
+	normal j
+endfunction
+
+" load Atom data from file. start at startatom
+function! Atom.read() dict
+	call Require("atom")
+	call Require("source")
+	let self.source = getline(".")
+	" <source> -> endsource -> starttrans
+	normal jj
+	if getline(".") =~ 'trans'
+		call self.readKey("trans")
+	endif
+	if getline(".") =~ 'comment'
+		call self.readKey("comment")
+	endif
+	call self.readKey("ends")
+	" endatom -> startatom|endatomlist
+	normal j
+endfunction
+
+
+"
+" AtomList functions
+"
+
 let AtomList = { "atoms":[] }
+
+function! AtomList.read() dict
+	call Require("atomlist")
+	while getline(".") != "endatomlist"
+		let atom = deepcopy(g:Atom)
+		call atom.read()
+		let self.atoms += [deepcopy(atom)]
+	endwhile
+	normal j
+endfunction
+
+function! AtomList.rawSplit() dict
+	let list = ["startatomlist"]
+	for atom in self.atoms
+		let list += atom.rawSplit()
+	endfor
+	return deepcopy(list + ["endatomlist"])
+endfunction
 
 function! TrimList(list)
 	if len(a:list) == 0
@@ -12,11 +105,11 @@ function! TrimList(list)
 		return
 	endif
 
-	let list = deepcopy(a:list)
-	while list[-1] == ""
-		call remove(list, -1)
+	while a:list[-1] == ""
+		call remove(a:list, -1)
 	endwhile 
-	return deepcopy(list)
+	
+	reuturn a:list
 endfunction
 
 function! AtomList.footnote() dict
@@ -72,6 +165,7 @@ function! AtomList.styleSplit(split_source, split_trans) dict
 		let dict.source[-1] = JoinString(dict.source[-1],atom.source)
 		let dict.trans[-1]=JoinString(dict.trans[-1],join(atom.trans))
 		let dict.comment += atom.comment
+
 		if has_key(a:split_source, atom.ends)
 			let dict.source += a:split_source[atom.ends]
 		endif
@@ -79,178 +173,41 @@ function! AtomList.styleSplit(split_source, split_trans) dict
 			let dict.trans += a:split_trans[atom.ends]
 		endif
 	endfor
-	"call map(dict, "TrimList(v:val)")
-	let list = dict.source + dict.trans + dict.comment
-	return deepcopy(list)
-	"return deepcopy(dict.source + dict.trans + dict.comment)
+
+	call TrimList(dict.source)
+	call TrimList(dict.trans)
+
+	return deepcopy(dict.source + dict.trans + dict.comment)
 endfunction
 
-""""""""""""""""""""""
-" generic base class "
-""""""""""""""""""""""
+"
+" translate definitions
+"
 
-" subClass: for example, a par contains phrases. So the subClass of Par would
-" be Phrase
-" subKey: key to access list of subClass. Continuing the previous example, the
-" Phrases of the Par would be in a list whose key was "phrases", so subKey
-" would be "phrases"
-let Div = { "div" : "", "subClass" : {}, "subKey" : "" }
-
-" expects cursor to be on start*, then moves to next line, into the thing
-function! Require(div)
-	if getline(".") != "start".a:div || search("end".a:div, "n") == -1
-		throw "error:Require:" . a:div . ":on:" . getline(".")
-	else
-		normal j
-	endif
-endfunction
-
-" start at start<div>, ends at line after end<div>
-function! Div.read() dict
-	" clear list to allow appending - default contains one item
-	let self[self.subKey] = []
-	call Require(self.div)
-	while getline(".") != "end" . self.div
-		let sub = deepcopy(self.subClass)
-		call sub.read()
-		let self[self.subKey] += [deepcopy(sub)]
-	endwhile
-	normal j
-endfunction
-
-" creates list of strings for raw output
-function! Div.rawSplit() dict
-	let list = ["start" . self.div]
-	for i in self[self.subKey]
-		let list += i.rawSplit()
-	endfor
-	let list += ["end" . self.div]
-	return deepcopy(list)
-endfunction
-
-" gather all Atoms into one list
-function! Div.gather() dict
-	let list = deepcopy(g:AtomList)
-	for i in self[self.subKey]
-		let list.atoms += i.gather().atoms
-	endfor
-	
-	if len(list.atoms) == 0
-		echo "warning:gather:empty"
-	else
-		let list.atoms[-1].ends = self.div
-	endif
-
-	return deepcopy(list)
-endfunction
-
-"""""""""""""""""""""
-" class definitions "
-"""""""""""""""""""""
-
-" phrases: list of atoms
-" atoms left empty so add is to start
-let Phrase = deepcopy(Div)
-call extend(Phrase, { "div":"phrase", "subClass":Atom, "subKey":"atoms"})
-call extend(Phrase, { "atoms":[] })
-
-let Par = deepcopy(Div)
-call extend(Par, { "div":"par", "subClass":Phrase, "subKey":"phrases"})
-call extend(Par, { "phrases":[deepcopy(Phrase)] })
-
-let Translate = deepcopy(Div)
-call extend(Translate, { "div":"mine", "subClass":Par, "subKey":"pars" })
-call extend(Translate, { "pars":[deepcopy(Par)] })
-
-" source: space seperated source
-call extend(Translate, { "source":[], "upto":0, "nextStart":"" })
-let Translate.parentRawSplit = Div.rawSplit
-" flag: if end of input is end of mine [= text under translate control]
-let Translate.startmine = 1
+let Translate = {}
+let Translate.atomlist = deepcopy(AtomList)
+let Translate.source = []	" source: space seperated source
+let Translate.upto = 0		" index upto in source
+" figured out, whether am inside atomlist already or am starting new one
+let Translate.startatomlist = 1
+" flag: if end of input is end of atomlist [= text under translate control]
 " yes|no|ask
-let Translate.endmine = "yes"
-
-
-"""""""""""""""""""""
-" atom functions    "
-"""""""""""""""""""""
-
-function! Trim(string)
-	return matchstr(a:string, '^[[:space:]]*\zs.*\ze[[:space:]]*$')
-endfunction
-
-function! Atom.parseSrc() dict
-	while self.trans[-1] =~ '{.*}'
-		let comment = Trim(matchstr(self.trans[-1], '{\zs[^}]*'))
-		call add(self.comment, comment)
-
-		let new_string = Trim(matchstr(self.trans[-1], '}\zs.*'))
-		let old_string = Trim(matchstr(self.trans[-1], '^[^{]*'))
-
-		let self.trans[-1] = old_string
-		if new_string != ""
-			call add(self.trans, new_string)
-		endif
-	endwhile
-endfunction
-
-function! Atom.rawSplit() dict
-	call self.parseSrc()
-	" source is one line only
-	let list = ["startatom", "startsource"] + [self.source] + ["endsource"]
-	let list += ["starttrans"] + self.trans + ["endtrans"]
-	if len(self.comment) > 0
-		let list += ["startcomment"] + self.comment + ["endcomment"]
-	endif
-	return deepcopy(list + ["endatom"])
-endfunction
-
-" start at start(.*)
-" ends off line past end\1
-" div is same as key
-function! Atom.readKey(div) dict
-	call Require(a:div)
-	let list = []
-	while getline(".") != "end" . a:div
-		let list += [getline(".")]
-		normal j
-	endwhile
-	let self[a:div] = deepcopy(list)
-	normal j
-endfunction
-
-" load Atom data from file. start at startatom
-function! Atom.read() dict
-	call Require("atom")
-	call Require("source")
-	let self.source = getline(".")
-	" <source> -> endsource -> starttrans
-	normal jj
-	call self.readKey("trans")
-	if getline(".") =~ 'comment'
-		call self.readKey("comment")
-	endif
-	" end(trans|comment) -> (start|end)!(atom)
-	normal j
-endfunction
-
-function! Atom.gather() dict
-	call self.parseSrc()
-	let atomList = deepcopy(g:AtomList)
-	let atomList.atoms = [ deepcopy(self) ]
-	return deepcopy(atomList)
-endfunction
+let Translate.endatomlist = "yes"
 
 
 """""""""""""""""""""""
 " translate functions "
 """""""""""""""""""""""
 
-" arg: num source to add
+" arg: number of words that this atom translates
 function! Translate.add(num) dict
 	let num = a:num
 
-	if self.upto + a:num -1 > len(self.source) - 1
+	" first expr: eg upto=5, proccessing 2, =proccessing 5&6, 5+2-1
+	" second expr: highest valid index - len counts from 1, index from 0
+	" if highest index being proccessed is more then then highest valid
+	" index...
+	if self.upto + a:num - 1 > len(self.source) - 1
 		" eg highest index is 5, upto 4: 5-4=1
 		" +1 because using 4&5 =2
 		let num = len(self.source) - 1 - self.upto + 1
@@ -262,18 +219,13 @@ function! Translate.add(num) dict
 
 	let atom = deepcopy(g:Atom)
 	let atom.source = join(self.source[self.upto : self.upto+num-1])
-	let self.pars[-1].phrases[-1].atoms += [deepcopy(atom)]
+	let self.atomlist.atoms += [deepcopy(atom)]
 	let self.upto += num
-
-	if self.nextStart != ""
-		call self.setDiv("start" . self.nextStart)
-		let self.nextStart = ""
-	endif
 endfunction
 
 function! Translate.appendTrans(trans) dict
-	let trans = JoinString(self.pars[-1].phrases[-1].atoms[-1].trans[-1],a:trans)
-	let self.pars[-1].phrases[-1].atoms[-1].trans[-1] = trans
+	let trans = JoinString(self.atomlist.atoms[-1].trans[-1],a:trans)
+	let self.atomlist.atoms[-1].trans[-1] = trans
 endfunction
 
 " support function for genPrompt. echo <hebrew> is left-to-right...which is
@@ -283,13 +235,7 @@ endfunction
 function! FlipString(str)
 	let char_list = split(a:str, '\zs')
 	call reverse(char_list)
-
-	let tmp = ''
-	for i in char_list
-		let tmp .= i
-	endfor
-
-	return tmp
+	return join(char_list, '')
 endfunction
 
 function! Translate.genPrompt() dict
@@ -298,7 +244,7 @@ function! Translate.genPrompt() dict
 		let start += self.upto
 		let end += self.upto
 		if start > 0 && end < len(self.source)
-			let string = FlipString(join(self.souce[start:and]))
+			let string = FlipString(join(self.source[start:and]))
 			let list += [string]
 		endif
 	endfor
@@ -308,75 +254,68 @@ function! Translate.genPrompt() dict
 endfunction
 
 function! Translate.setDiv(div) dict
-	if a:div !~ '^\(start\|end\)\(par\|phrase\)$'
+	if a:div !~ '^\(start\|end\)\(par\|phrase\|atomlist\)$'
 		throw "ERROR:div:bad arg:" . a:div
-	endif
-
-	
-	if a:div =~ 'end'
-		let self.nextStart = matchstr(a:div,'par\|phrase')
+	elseif a:div =~ 'start' && len(self.atomlist.atoms) < 2
+		echo "warning:setDiv:input error"
 		return
-	elseif a:div =~ 'start'
-		" chang div of last atom by moving it to new par|phrase
-		let atom = deepcopy(self.pars[-1].phrases[-1].atoms[-1])
-		call remove(self.pars[-1].phrases[-1].atoms, -1)
-
-		if a:div =~ 'par'
-			call add(self.pars, deepcopy(g:Par))
-		elseif a:div =~ "phrase"
-			call add(self.pars[-1].phrases, deepcopy(g:Phrase))
-		endif
-
-		call add(self.pars[-1].phrases[-1].atoms, deepcopy(atom))
 	endif
-endfunction
 
-"function! Translate.endInput() dict
-"	call self.setDiv("endpar")
-"endfunction
+	" start means set second-to-last as end
+	let index = a:div =~ 'end' ? -1 : -2
+
+	let ends = matchstr(a:div, 'par\|phrase\|atomlist')
+
+	if DivVal[self.atomlist.atoms[index].ends] >= DivVal[ends]
+		return
+	endif
+
+	let self.atomlist.atoms[index].ends = ends
+endfunction
 
 function! Translate.endMine(arg) dict
-	self.endmine = a:arg
+	let self.endatomlist = a:arg
 endfunction
 
-" ask whether end of input is endmine
+" ask whether end of input is endatomlist
 function! Translate.askEnd()
-	echo "endmine?(y/n): "
+	echo "endatomlist?(y/n): "
 	let response = getchar()
 	if response == "y" || nr2char(response) == "y"
-		self.endmine = "yes"
+		self.endatomlist = "yes"
 	else 
-		self.endmine = "no"
+		self.endatomlist = "no"
 	endif
 endfunction
 
-" checks if in the middle of mine
+" checks if in the middle of atomlist
 function! Translate.checkCont() dict
 	let line = line("." - 1)
-	if line > 0 && line == "endpar"
-		let self.startmine = 0
-	elseif getline(line) == "endphrase"
+	if line > 0 && getline(line) == "endpar"
+		let self.startatomlist = 0
+	elseif getline(line) =~ 'end\(phrase\|atom\)'
 		call self.jumpoffcliff()
 	else
-		let self.startmine = 1
+		let self.startatomlist = 1
 	endif
 endfunction
 
-"" also calls endInput()
+" 
+" output functions
+" following a call to rawSplit() or styleSplit(), no further input is possible
+"
+
 function! Translate.rawSplit() dict
-	"call self.endInput()
-	let list = self.parentRawSplit()
+	call self.setDiv("endatomlist")
+	let list = self.atomlist.rawSplit()
 
-	if self.startmine == 0
-		" mine item added in parentRawSplit()
-		call remove(list, 0)
-	endif
-
-	if self.endmine == "ask"
+	if self.endatomlist == "ask"
 		self.askEnd()
 	endif
 
-	if self.endmine == "no" || self.upto > len(self.source)
+	" upto is one more then index done, len() 1 more then top index
+	" if all was proccessed, upto should equal len
+	if self.endatomlist == "no" || self.upto < len(self.source)
 		call remove(list, -1)
 	endif
 
@@ -389,13 +328,13 @@ endfunction
 " other splits: same dictionary, with keys for each div where should add NL
 " within source and trans
 function! Translate.styleSplit(split_sep, split_source, split_trans) dict
-	let gather = self.gather()
+	call self.setDiv("endatomlist")
 	let list = []
 
-	while !empty(gather)
-		let sub_gather = gather.remove(keys(a:split_sep)[0])
-		call sub_gather.footnote()
-		let list += sub_gather.styleSplit(a:split_source,a:split_trans)
+	while !empty(self.atoms.atomlist)
+		let sub = self.atomlist.remove(keys(a:split_sep)[0])
+		call sub.footnote()
+		let list += sub.styleSplit(a:split_source,a:split_trans)
 		let list += values(a:split_sep)[0]
 	endwhile
 
