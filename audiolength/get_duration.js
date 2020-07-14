@@ -1,24 +1,27 @@
 const fs = require('fs');
-const child_process = require ('child_process');
+const child_process = require('child_process');
 
-const json = fs.readFileSync('data.json', {
-    encoding: 'utf8'
-});
+const sources = JSON.parse(fs.readFileSync('data.json', {
+	encoding: 'utf8'
+}));
+const durations = JSON.parse(fs.readFileSync('duration.json', {
+	encoding: 'utf8'
+}));
 
-const data = JSON.parse(json);
+let sourceMap = {};
 
-lessonKeys = Object.getOwnPropertyNames(data.Lessons);
-for (const lessonId of lessonKeys) {
+if (durations.length) {
+	for (const duration in duration) {
+		sourceMap[duration.Source] = duration.Duration;
+	}
+} else {
+	sourceMap = sources;
+}
+
+for (const source of sources) {
 	try {
-		if (!data.Lessons[lessonId].Audio) {
-			continue;
-		}
-		for (const media of data.Lessons[lessonId].Audio) {
-			const duration = getDuration(media.Source);
-			console.log(JSON.stringify({
-				Source: media.Source,
-				Duration: duration
-			}) + ',');
+		if (!sourceMap[source]) {
+			sourceMap[source] = getDuration(source);
 		}
 	} catch {
 		continue;
@@ -46,7 +49,7 @@ function getDurationFromPartial(source, bytes) {
 			encoding: 'utf8'
 		});
 		return +duration.trim();
-	} catch (ex){		
+	} catch (ex) {
 		return 0;
 	}
 }
