@@ -31,12 +31,12 @@ for (const source of sources) {
 fs.writeFileSync('duration.json', JSON.stringify(sourceMap));
 
 function getDuration(source) {
-	// let duration15 = getDurationFromPartial(source, 1500);
-	// let duration30 = getDurationFromPartial(source, 3000);
+	let duration15 = getDurationFromPartial(source, 1500);
+	let duration30 = getDurationFromPartial(source, 3000);
 
-	// if (duration15 && duration15 == duration30) {
-	// 	return duration30;
-	// }
+	if (duration15 && duration15 == duration30) {
+		return duration30;
+	}
 
 	return getDurationFromPartial(source);
 }
