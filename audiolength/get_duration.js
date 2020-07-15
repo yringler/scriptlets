@@ -11,11 +11,11 @@ const durations = JSON.parse(fs.readFileSync('duration.json', {
 let sourceMap = {};
 
 if (durations.length) {
-	for (const duration in duration) {
+	for (const duration in durations) {
 		sourceMap[duration.Source] = duration.Duration;
 	}
 } else {
-	sourceMap = sources;
+	sourceMap = durations;
 }
 
 for (const source of sources) {
@@ -27,6 +27,8 @@ for (const source of sources) {
 		continue;
 	}
 }
+
+fs.writeFileSync('duration.json', JSON.stringify(sourceMap));
 
 function getDuration(source) {
 	let duration15 = getDurationFromPartial(source, 1500);
@@ -43,7 +45,7 @@ function getDurationFromPartial(source, bytes) {
 	let rangeArguments = bytes ? `-r 0-${bytes}` : '';
 
 	try {
-		child_process.execSync(`curl -s ${rangeArguments} "${encodeURI(source)}" --output tmp.mp3 > null`);
+		child_process.execSync(`curl -s ${rangeArguments} "${encodeURI(source)}" --output tmp.mp3 > null.json`);
 		const durationCommand = `mediainfo --Output="Audio;%FileName% %Duration%" tmp.mp3`;
 		const duration = child_process.execSync(durationCommand, {
 			encoding: 'utf8'
