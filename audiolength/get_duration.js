@@ -1,7 +1,7 @@
 const fs = require('fs');
 const child_process = require('child_process');
 
-const sources = JSON.parse(fs.readFileSync('data.json', {
+const sources = JSON.parse(fs.readFileSync('classlist.json', {
 	encoding: 'utf8'
 }));
 const durations = JSON.parse(fs.readFileSync('duration.json', {
