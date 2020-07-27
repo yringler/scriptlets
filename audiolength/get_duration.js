@@ -28,7 +28,7 @@ for (const source of sources) {
 	}
 }
 
-fs.writeFileSync('duration.json', JSON.stringify(sourceMap));
+fs.writeFileSync('duration.json', JSON.stringify(sourceMap, '\t'));
 
 function getDuration(source) {
 	let duration15 = getDurationFromPartial(source, 1500);
