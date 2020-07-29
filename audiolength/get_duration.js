@@ -1,10 +1,11 @@
 const fs = require('fs');
 const child_process = require('child_process');
+const path = require('path');
 
-const sources = JSON.parse(fs.readFileSync('classlist.json', {
+const sources = JSON.parse(fs.readFileSync(path.join(__dirname, 'classlist.json'), {
 	encoding: 'utf8'
 }));
-const durations = JSON.parse(fs.readFileSync('duration.json', {
+const durations = JSON.parse(fs.readFileSync(path.join(__dirname, 'duration.json'), {
 	encoding: 'utf8'
 }));
 
@@ -28,7 +29,7 @@ for (const source of sources) {
 	}
 }
 
-fs.writeFileSync('duration.json', JSON.stringify(sourceMap, '\t'));
+fs.writeFileSync(path.join(__dirname, 'duration.json'), JSON.stringify(sourceMap, '\t'));
 
 function getDuration(source) {
 	let duration15 = getDurationFromPartial(source, 1500);
