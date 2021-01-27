@@ -21,7 +21,7 @@ if (durations.length) {
 
 for (const source of sources) {
 	try {
-		if (!sourceMap[source]) {
+		if (sourceMap[source] == null || sourceMap[source] == undefined) {
 			sourceMap[source] = getDuration(source);
 		}
 	} catch {
