@@ -1,3 +1,10 @@
+/**
+ * Ensure that you have installed
+ * node
+ * curl
+ * mediainfo
+ */
+
 const fs = require('fs');
 const child_process = require('child_process');
 const path = require('path');
@@ -21,7 +28,7 @@ if (durations.length) {
 
 for (const source of sources) {
 	try {
-		if (sourceMap[source] == null || sourceMap[source] == undefined) {
+		if (!sourceMap[source]) {
 			sourceMap[source] = getDuration(source);
 		}
 	} catch {
@@ -32,12 +39,12 @@ for (const source of sources) {
 fs.writeFileSync(path.join(__dirname, 'duration.json'), JSON.stringify(sourceMap, '\t'));
 
 function getDuration(source) {
-	let duration15 = getDurationFromPartial(source, 1500);
-	let duration30 = getDurationFromPartial(source, 3000);
+	// let duration15 = getDurationFromPartial(source, 1500);
+	// let duration30 = getDurationFromPartial(source, 3000);
 
-	if (duration15 && duration15 == duration30) {
-		return duration30;
-	}
+	// if (duration15 && duration15 == duration30) {
+	// 	return duration30;
+	// }
 
 	return getDurationFromPartial(source);
 }
@@ -47,13 +54,14 @@ function getDurationFromPartial(source, bytes) {
 	let rangeArguments = bytes ? `-r 0-${bytes}` : '';
 
 	try {
-		child_process.execSync(`curl -s ${rangeArguments} "${encodeURI(source)}" --output tmp.mp3 > null.json`);
-		//const durationCommand = `mp3info -p "%S" tmp.mp3`;
-		const durationCommand = `mediainfo --Output="Audio;%FileName% %Duration%" tmp.mp3`;
+		child_process.execSync(`curl -s ${rangeArguments} "${source}" --output tmp.mp3 > null.json`);
+		const durationCommand = `mp3info -p "%S" tmp.mp3`;
+		//const durationCommand = `mediainfo --Output="Audio;%FileName% %Duration%" tmp.mp3`;
 		const duration = child_process.execSync(durationCommand, {
 			encoding: 'utf8'
 		});
-		//return (+duration.trim()) * 1000;
+		console.log(duration);
+		return (+duration.trim()) * 1000;
 		return +duration;
 	} catch (ex) {
 		return 0;
