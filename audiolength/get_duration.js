@@ -2,7 +2,7 @@
  * Ensure that you have installed
  * node
  * curl
- * mediainfo
+ * mediainfo (and mp3info. I switch back and forth some times.)
  */
 
 const fs = require('fs');
@@ -50,11 +50,10 @@ function getDuration(source) {
 }
 
 // The commented out code is for use with the mediainfo command
-function getDurationFromPartial(source, bytes) {
-	let rangeArguments = bytes ? `-r 0-${bytes}` : '';
+function getDurationFromPartial(source) {
 
 	try {
-		child_process.execSync(`curl -s ${rangeArguments} "${source}" --output tmp.mp3 > null.json`);
+		child_process.execSync(`curl "${source}" --output tmp.mp3 > null.json`);
 		const durationCommand = `mp3info -p "%S" tmp.mp3`;
 		//const durationCommand = `mediainfo --Output="Audio;%FileName% %Duration%" tmp.mp3`;
 		const duration = child_process.execSync(durationCommand, {
