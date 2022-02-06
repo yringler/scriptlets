@@ -54,13 +54,13 @@ function getDurationFromPartial(source) {
 
 	try {
 		child_process.execSync(`curl "${source}" --output tmp.mp3 > null.json`);
-		const durationCommand = `mp3info -p "%S" tmp.mp3`;
-		//const durationCommand = `mediainfo --Output="Audio;%FileName% %Duration%" tmp.mp3`;
+		//const durationCommand = `mp3info -p "%S" tmp.mp3`;
+		const durationCommand = `mediainfo --Output="Audio;%FileName% %Duration%" tmp.mp3`;
 		const duration = child_process.execSync(durationCommand, {
 			encoding: 'utf8'
 		});
 		console.log(duration);
-		return (+duration.trim()) * 1000;
+		//return (+duration.trim()) * 1000;
 		return +duration;
 	} catch (ex) {
 		return 0;
